@@ -6,6 +6,7 @@ import { LoggingMessageNotificationSchema } from '@modelcontextprotocol/sdk/type
 import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin.js';
 import type { SSEPluginConfig } from '../../types/config.js';
 import { createLogger } from '@extension/shared/lib/logger';
+import { sanitizeTools } from '../../utils/sanitizeTool.js';
 
 
 const logger = createLogger('SSEPlugin');
@@ -182,7 +183,7 @@ export class SSEPlugin implements ITransportPlugin {
       if (capabilities?.tools) {
         promises.push(
           client.listTools().then(({ tools }) => {
-            tools.forEach(item => primitives.push({ type: 'tool', value: item }));
+            sanitizeTools(tools).forEach(item => primitives.push({ type: 'tool', value: item }));
           }),
         );
       }

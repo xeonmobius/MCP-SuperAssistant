@@ -14,6 +14,7 @@ import type { Primitive, NormalizedTool, PrimitivesResponse } from '../types/pri
 import type { AllEvents } from '../types/events.js';
 import { createLogger } from '@extension/shared/lib/logger';
 import { analyticsService } from '../../../utils/analytics-service.js';
+import { sanitizeTool } from '../utils/sanitizeTool.js';
 
 
 const logger = createLogger('McpClient');
@@ -460,7 +461,7 @@ export class McpClient extends EventEmitter<AllEvents> {
 
   private normalizeTools(toolPrimitives: Primitive[]): NormalizedTool[] {
     return toolPrimitives.map(p => {
-      const tool = p.value;
+      const tool = sanitizeTool(p.value);
       return {
         name: tool.name,
         description: tool.description || '',

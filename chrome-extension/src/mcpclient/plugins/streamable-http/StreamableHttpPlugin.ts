@@ -3,6 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin.js';
 import { createLogger } from '@extension/shared/lib/logger';
+import { sanitizeTools } from '../../utils/sanitizeTool.js';
 
 
 const logger = createLogger('StreamableHttpPlugin');
@@ -167,9 +168,10 @@ export class StreamableHttpPlugin implements ITransportPlugin {
       if (capabilities?.tools) {
         promises.push(
           client.listTools().then(({ tools }) => {
-            tools.forEach(item => primitives.push({ type: 'tool', value: item }));
+            sanitizeTools(tools).forEach(item => primitives.push({ type: 'tool', value: item }));
           }).catch(error => {
-            logger.warn('[StreamableHttpPlugin] Failed to list tools:', error);
+            logger.error('[StreamableHttpPlugin] Failed to list tools:', error);
+            throw error;
           }),
         );
       }
@@ -189,7 +191,7 @@ export class StreamableHttpPlugin implements ITransportPlugin {
       return primitives;
     } catch (error) {
       logger.error('[StreamableHttpPlugin] Failed to get primitives:', error);
-      return [];
+      throw error;
     }
   }
 }

@@ -737,15 +737,14 @@ async function handleMcpMessage(
           const primitives = await getPrimitivesWithBackwardsCompatibility(getServerUrl(), forceRefresh, connectionType);
           logger.debug(`Retrieved ${primitives.length} primitives from server`);
           
-          // Use the helper function to normalize tools with proper schema handling
           const tools = normalizeTools(primitives);
           logger.debug(`Returning ${tools.length} normalized tools to content script`);
           
           result = tools;
         } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
           logger.error('[Background] Error getting tools:', error);
-          // Return empty array instead of throwing to prevent UI crashes
-          result = [];
+          result = { error: errorMsg, tools: [] };
         }
         break;
       }

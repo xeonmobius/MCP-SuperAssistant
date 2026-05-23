@@ -6,6 +6,7 @@ import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types
 import type { WebSocketPluginConfig } from '../../types/config.js';
 import { WebSocketTransport } from './WebSocketTransport.js';
 import { createLogger } from '@extension/shared/lib/logger';
+import { sanitizeTools } from '../../utils/sanitizeTool.js';
 
 
 const logger = createLogger('WebSocketPlugin');
@@ -235,7 +236,7 @@ export class WebSocketPlugin implements ITransportPlugin {
       if (capabilities?.tools) {
         promises.push(
           client.listTools().then(({ tools }) => {
-            tools.forEach(item => primitives.push({ type: 'tool', value: item }));
+            sanitizeTools(tools).forEach(item => primitives.push({ type: 'tool', value: item }));
           }),
         );
       }

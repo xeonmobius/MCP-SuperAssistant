@@ -11,6 +11,7 @@ import { WebSocketTransport } from './plugins/websocket/WebSocketTransport.js';
 // Configuration
 import { DEFAULT_CLIENT_CONFIG } from './types/config.js';
 import { createLogger } from '@extension/shared/lib/logger';
+import { sanitizeTool } from './utils/sanitizeTool.js';
 
 // Export core classes
 
@@ -295,7 +296,7 @@ export function normalizeToolsFromPrimitives(primitives: any[]): any[] {
   return primitives
     .filter(p => p.type === 'tool')
     .map(p => {
-      const tool = p.value;
+      const tool = sanitizeTool(p.value);
       return {
         name: tool.name,
         description: tool.description || '',
