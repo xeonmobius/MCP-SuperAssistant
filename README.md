@@ -192,6 +192,73 @@ Example Workflow:
 9. Automation can be achieved by enabling Auto-Execute and Auto-Submit modes, by clicking on the 'MCP' button and configuring the Auto modes.
 
 
+## Skills (Virtual Tools)
+
+MCP SuperAssistant can load **skills** from your local filesystem and expose them as virtual MCP tools. Skills are markdown files (`SKILL.md`) with YAML frontmatter that contain instructions the AI can reference on-demand.
+
+### How it works
+
+1. Skills appear as pseudo-tools in the sidebar (e.g., `skill_find-docs`)
+2. When the AI calls a skill tool, the full skill content is injected as the tool result
+3. Skills are auto-discovered on connection — no manual loading required
+
+### Setup: Add filesystem server to your proxy config
+
+Add `@modelcontextprotocol/server-filesystem` to your `config.json` alongside your other MCP servers:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/youruser/.agents/skills",
+        "/Users/youruser/.claude/skills"
+      ]
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": ["-y", "@wonderwhy-er/desktop-commander"]
+    }
+  }
+}
+```
+
+> **Important:** The paths in the filesystem server config must match the "Skills Directories" configured in the extension settings. The default paths are `~/.agents/skills` and `~/.claude/skills`.
+
+### Configure skills paths in the extension
+
+1. Open the sidebar → Server Status → Settings (gear icon)
+2. Scroll to "Skills Directories"
+3. Enter one directory path per line (e.g., `~/.agents/skills`)
+4. Click "Save Paths" then "Reload Skills"
+
+### Skill file format (`SKILL.md`)
+
+Each skill is a markdown file in its own subdirectory:
+
+```
+~/.agents/skills/
+  find-docs/
+    SKILL.md
+  camofox-browser/
+    SKILL.md
+```
+
+SKILL.md format:
+```yaml
+---
+name: find-docs
+description: Retrieves up-to-date documentation for any developer technology.
+---
+
+# Find Docs Skill
+
+Full skill instructions in markdown...
+```
+
 ## Tips & Tricks
 
 1. **Turn off search mode** (chatgpt, perplexity) in AI chat interfaces for better tool call prompt experience and to prevent MCP SuperAssistant from getting derail.

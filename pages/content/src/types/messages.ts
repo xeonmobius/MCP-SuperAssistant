@@ -125,6 +125,9 @@ export type McpMessageType =
   | 'mcp:get-server-config'
   | 'mcp:update-server-config'
   | 'mcp:heartbeat'
+  | 'mcp:get-skills-paths'
+  | 'mcp:update-skills-paths'
+  | 'mcp:reload-skills'
   | 'connection:status-changed'
   | 'mcp:tool-update'
   | 'mcp:server-config-updated'
@@ -190,6 +193,9 @@ export function isValidMessageType(type: string): type is McpMessageType {
     'mcp:get-server-config',
     'mcp:update-server-config',
     'mcp:heartbeat',
+    'mcp:get-skills-paths',
+    'mcp:update-skills-paths',
+    'mcp:reload-skills',
     'connection:status-changed',
     'mcp:tool-update',
     'mcp:server-config-updated',

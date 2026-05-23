@@ -685,8 +685,37 @@ class McpClient {
     return useConnectionStore.getState().status;
   }
 
+  async getSkillsPaths(): Promise<string[]> {
+    try {
+      const result = await contextBridge.sendMessage('background', 'mcp:get-skills-paths', {});
+      return (result as string[]) || [];
+    } catch (error) {
+      logMessage(`[McpClient] Error getting skills paths: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
+  async updateSkillsPaths(paths: string[]): Promise<boolean> {
+    try {
+      await contextBridge.sendMessage('background', 'mcp:update-skills-paths', { paths });
+      return true;
+    } catch (error) {
+      logMessage(`[McpClient] Error updating skills paths: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
+  async reloadSkills(): Promise<{ count: number; skills?: Array<{ name: string; description: string }>; error?: string }> {
+    try {
+      return await contextBridge.sendMessage('background', 'mcp:reload-skills', {});
+    } catch (error) {
+      logMessage(`[McpClient] Error reloading skills: ${error instanceof Error ? error.message : String(error)}`);
+      return { count: 0, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
   /**
-   * Check if client is properly initialized
+   * Check if the client is initialized and ready
    */
   isReady(): boolean {
     return this.isInitialized;

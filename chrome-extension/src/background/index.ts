@@ -17,8 +17,8 @@ import {
 } from '../mcpclient/index';
 import { sendAnalyticsEvent, trackError, collectDemographicData } from '../../utils/analytics';
 import { analyticsService } from '../../utils/analytics-service';
-import { getCachedSkills, loadSkillsFromEndpoint, persistSkills, loadPersistedSkills } from '../skills/loader.js';
-import { skillToPseudoTool } from '../skills/parser.js';
+import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths } from '../skills/loader.js';
+import { skillToPseudoTool, type Skill } from '../skills/parser.js';
 
 // Import message types for type safety
 import type {
@@ -362,10 +362,25 @@ async function tryConnectToServer(uri: string, type: ConnectionType = connection
       const skills = await loadSkillsFromEndpoint(uri);
       if (skills.length > 0) {
         await persistSkills(skills);
-        logger.debug(`[Background] Loaded ${skills.length} skills`);
+        logger.debug(`[Background] Loaded ${skills.length} skills from endpoint`);
       }
     } catch (skillsError) {
-      logger.debug('[Background] Skills loading skipped:', skillsError instanceof Error ? skillsError.message : String(skillsError));
+      logger.debug('[Background] Skills endpoint loading skipped:', skillsError instanceof Error ? skillsError.message : String(skillsError));
+    }
+
+    // Load skills from filesystem MCP server
+    try {
+      logger.debug('[Background] Loading skills from filesystem server...');
+      const fsSkills = await loadSkillsFromFilesystemServer(uri, callToolWithBackwardsCompatibility);
+      if (fsSkills.length > 0) {
+        const existing = getCachedSkills();
+        const existingNames = new Set(existing.map(s => s.name));
+        const merged = [...existing, ...fsSkills.filter(s => !existingNames.has(s.name))];
+        await persistSkills(merged);
+        logger.debug(`[Background] Loaded ${fsSkills.length} skills from filesystem (${merged.length} total)`);
+      }
+    } catch (fsError) {
+      logger.debug('[Background] Filesystem skills loading skipped:', fsError instanceof Error ? fsError.message : String(fsError));
     }
     
     connectionAttemptCount = 0; // Reset counter on success
@@ -960,6 +975,51 @@ async function handleMcpMessage(
               });
             });
           }, 0);
+        }
+        break;
+      }
+
+      case 'mcp:get-skills-paths': {
+        result = await getSkillsPaths();
+        break;
+      }
+
+      case 'mcp:update-skills-paths': {
+        const { paths } = payload as { paths: string[] };
+        if (!Array.isArray(paths)) {
+          throw new Error('Invalid skills paths: expected array of strings');
+        }
+        await setSkillsPaths(paths);
+        logger.debug(`[Background] Updated skills paths: ${paths.join(', ')}`);
+        result = { success: true };
+        break;
+      }
+
+      case 'mcp:reload-skills': {
+        try {
+          const uri = getServerUrl();
+          const allSkills: Skill[] = [];
+
+          try {
+            const endpointSkills = await loadSkillsFromEndpoint(uri);
+            allSkills.push(...endpointSkills);
+          } catch {}
+
+          try {
+            const fsSkills = await loadSkillsFromFilesystemServer(uri, callToolWithBackwardsCompatibility);
+            const existingNames = new Set(allSkills.map(s => s.name));
+            allSkills.push(...fsSkills.filter(s => !existingNames.has(s.name)));
+          } catch {}
+
+          if (allSkills.length > 0) {
+            await persistSkills(allSkills);
+          }
+
+          result = { count: allSkills.length, skills: allSkills.map(s => ({ name: s.name, description: s.description })) };
+          logger.debug(`[Background] Reloaded ${allSkills.length} skills`);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          result = { count: 0, error: errorMsg };
         }
         break;
       }

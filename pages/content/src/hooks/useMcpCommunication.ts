@@ -364,6 +364,18 @@ export const useMcpCommunication = () => {
     getServerConfig,
     updateServerConfig,
 
+    getSkillsPaths: useCallback(async () => {
+      return await mcpClient.getSkillsPaths();
+    }, []),
+
+    updateSkillsPaths: useCallback(async (paths: string[]) => {
+      return await mcpClient.updateSkillsPaths(paths);
+    }, []),
+
+    reloadSkills: useCallback(async () => {
+      return await mcpClient.reloadSkills();
+    }, []),
+
     /* -------------------------------------------------------------------- */
     /* Legacy compatibility                                                 */
     /* -------------------------------------------------------------------- */

@@ -42,6 +42,9 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
   const [lastErrorMessage, setLastErrorMessage] = useState<string>('');
   const [configFetched, setConfigFetched] = useState<boolean>(false);
   const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
+  const [skillsPaths, setSkillsPaths] = useState<string[]>([]);
+  const [skillsPathsInput, setSkillsPathsInput] = useState<string>('');
+  const [skillsReloadFeedback, setSkillsReloadFeedback] = useState<string>('');
 
   // Animation states
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
@@ -310,6 +313,15 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
       });
     }
   }, [communicationMethods, isEditingUri, isEditingConnectionType, configFetched, getServerConfig]); // Add configFetched dependency
+
+  useEffect(() => {
+    if (communicationMethods?.getSkillsPaths) {
+      communicationMethods.getSkillsPaths().then((paths: string[]) => {
+        setSkillsPaths(paths);
+        setSkillsPathsInput(paths.join('\n'));
+      }).catch(() => {});
+    }
+  }, [communicationMethods]);
 
   // Set status message based on connection state
   useEffect(() => {
@@ -869,6 +881,59 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
                   </div>
                 </div>
               </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 text-slate-600 dark:text-slate-400 font-medium">
+                  Skills Directories
+                </label>
+                <textarea
+                  value={skillsPathsInput}
+                  onChange={(e) => setSkillsPathsInput(e.target.value)}
+                  placeholder={"~/.agents/skills\n~/.claude/skills"}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent outline-none transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-500 font-mono text-xs resize-none"
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  One directory per line. Requires <code>@modelcontextprotocol/server-filesystem</code> in your proxy config.
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    onClick={async () => {
+                      const paths = skillsPathsInput.split('\n').map(p => p.trim()).filter(Boolean);
+                      if (communicationMethods?.updateSkillsPaths) {
+                        await communicationMethods.updateSkillsPaths(paths);
+                        setSkillsPaths(paths);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                  >
+                    Save Paths
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (communicationMethods?.reloadSkills) {
+                        setSkillsReloadFeedback('Reloading...');
+                        const result = await communicationMethods.reloadSkills();
+                        setSkillsReloadFeedback(result.count > 0 ? `${result.count} skills loaded` : 'No skills found');
+                        setTimeout(() => setSkillsReloadFeedback(''), 3000);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                  >
+                    Reload Skills
+                  </Button>
+                  {skillsReloadFeedback && (
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 self-center">
+                      {skillsReloadFeedback}
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2">
                 <Button
                   onClick={() => {
