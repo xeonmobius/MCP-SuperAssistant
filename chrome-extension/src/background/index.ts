@@ -17,6 +17,8 @@ import {
 } from '../mcpclient/index';
 import { sendAnalyticsEvent, trackError, collectDemographicData } from '../../utils/analytics';
 import { analyticsService } from '../../utils/analytics-service';
+import { getCachedSkills, loadSkillsFromEndpoint, persistSkills, loadPersistedSkills } from '../skills/loader.js';
+import { skillToPseudoTool } from '../skills/parser.js';
 
 // Import message types for type safety
 import type {
@@ -258,6 +260,9 @@ async function initializeExtension() {
   // Set initial connection status
   updateConnectionStatus(false);
 
+  // Load persisted skills
+  await loadPersistedSkills();
+
   // Initialize Remote Config Manager
   await initializeRemoteConfig();
 
@@ -349,6 +354,18 @@ async function tryConnectToServer(uri: string, type: ConnectionType = connection
       broadcastToolsUpdateToContentScripts(tools);
     } catch (toolsError) {
       logger.warn('[Background] Error broadcasting tools after connection:', toolsError);
+    }
+
+    // Load skills from proxy endpoint
+    try {
+      logger.debug('[Background] Loading skills from proxy endpoint...');
+      const skills = await loadSkillsFromEndpoint(uri);
+      if (skills.length > 0) {
+        await persistSkills(skills);
+        logger.debug(`[Background] Loaded ${skills.length} skills`);
+      }
+    } catch (skillsError) {
+      logger.debug('[Background] Skills loading skipped:', skillsError instanceof Error ? skillsError.message : String(skillsError));
     }
     
     connectionAttemptCount = 0; // Reset counter on success
@@ -699,9 +716,27 @@ async function handleMcpMessage(
           throw new Error('Tool name is required');
         }
 
-        logger.debug(`Calling tool: ${toolName} from adapter: ${adapterName || 'unknown'}`);
-        result = await callToolWithBackwardsCompatibility(getServerUrl(), toolName, args || {}, adapterName);
-        logger.debug(`Tool call completed: ${toolName}`);
+        if (toolName.startsWith('skill_')) {
+          logger.debug(`[Background] Intercepting skill tool call: ${toolName}`);
+          const skillName = toolName.replace(/^skill_/, '').replace(/_/g, '-');
+          const skills = getCachedSkills();
+          const skill = skills.find(s => s.name === skillName);
+          if (skill) {
+            result = {
+              content: [{ type: 'text', text: skill.content }],
+            };
+            logger.debug(`[Background] Returned skill content for: ${skillName} (${skill.content.length} chars)`);
+          } else {
+            result = {
+              content: [{ type: 'text', text: `Skill "${skillName}" not found. Available skills: ${skills.map(s => s.name).join(', ')}` }],
+              isError: true,
+            };
+          }
+        } else {
+          logger.debug(`Calling tool: ${toolName} from adapter: ${adapterName || 'unknown'}`);
+          result = await callToolWithBackwardsCompatibility(getServerUrl(), toolName, args || {}, adapterName);
+          logger.debug(`Tool call completed: ${toolName}`);
+        }
         break;
       }
 
@@ -737,8 +772,14 @@ async function handleMcpMessage(
           const primitives = await getPrimitivesWithBackwardsCompatibility(getServerUrl(), forceRefresh, connectionType);
           logger.debug(`Retrieved ${primitives.length} primitives from server`);
           
-          const tools = normalizeTools(primitives);
-          logger.debug(`Returning ${tools.length} normalized tools to content script`);
+          let tools = normalizeTools(primitives);
+
+          const skills = getCachedSkills();
+          if (skills.length > 0) {
+            const skillTools = skills.map(s => skillToPseudoTool(s));
+            tools = [...tools, ...skillTools];
+            logger.debug(`Appended ${skillTools.length} skill pseudo-tools (${tools.length} total)`);
+          }
           
           result = tools;
         } catch (error) {
