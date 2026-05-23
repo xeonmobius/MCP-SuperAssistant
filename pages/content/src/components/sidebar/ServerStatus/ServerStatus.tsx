@@ -41,6 +41,7 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
   const [isEditingConnectionType, setIsEditingConnectionType] = useState<boolean>(false);
   const [lastErrorMessage, setLastErrorMessage] = useState<string>('');
   const [configFetched, setConfigFetched] = useState<boolean>(false);
+  const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
 
   // Animation states
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
@@ -818,8 +819,25 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
                   <div className="mb-2">
                     <strong>To start MCP SuperAssistant Proxy:</strong>
                   </div>
-                  <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded font-mono text-xs border">
+                  <div className="relative bg-slate-100 dark:bg-slate-800 p-2 rounded font-mono text-xs border group">
                     npx @srbhptl39/mcp-superassistant-proxy@latest --config ./config.json --outputTransport {connectionType === 'sse' ? 'sse' : connectionType === 'websocket' ? 'ws' : 'streamableHttp'}
+                    <button
+                      onClick={() => {
+                        const cmd = `npx @srbhptl39/mcp-superassistant-proxy@latest --config ./config.json --outputTransport ${connectionType === 'sse' ? 'sse' : connectionType === 'websocket' ? 'ws' : 'streamableHttp'}`;
+                        navigator.clipboard.writeText(cmd).then(() => {
+                          setCopyFeedback(true);
+                          setTimeout(() => setCopyFeedback(false), 2000);
+                        });
+                      }}
+                      className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600"
+                      title="Copy command"
+                    >
+                      {copyFeedback ? (
+                        <span className="text-green-600 text-xs">Copied!</span>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      )}
+                    </button>
                   </div>
                   <div className="mt-2 text-xs">
                     <div className="mb-1">
