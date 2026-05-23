@@ -150,6 +150,25 @@ export async function loadSkillsFromFilesystemServer(
             if (content) {
               const skill = parseSkillMarkdown(content, `filesystem:${skillFilePath}`);
               if (skill) {
+                try {
+                  const skillDirPath = `${expandedPath}/${dirName}`;
+                  const dirListResult = await callTool(serverUrl, 'list_directory', { path: skillDirPath });
+                  const dirEntries = extractTextFromToolResult(dirListResult)?.split('\n') || [];
+                  const files = dirEntries
+                    .filter(e => /\[FILE\]/.test(e))
+                    .map(e => e.replace(/\[FILE\]\s+/, '').trim())
+                    .filter(f => f !== 'SKILL.md');
+
+                  if (files.length > 0) {
+                    const fullPaths = files.map(f => `${skillDirPath}/${f}`);
+                    skill.content += `\n\n---\n\nAvailable files in this skill directory:\n${
+                      fullPaths.map(f => `- ${f}`).join('\n')
+                    }\n\nUse the \`read_text_file\` tool with any of the above paths to load files on demand.`;
+                  }
+                } catch {
+                  logger.debug(`[SkillLoader] Could not list files in ${dirName}`);
+                }
+
                 skills.push(skill);
                 logger.debug(`[SkillLoader] Loaded skill from filesystem: ${skill.name}`);
               }
