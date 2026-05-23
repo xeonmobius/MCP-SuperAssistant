@@ -45,6 +45,8 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
   const [skillsPaths, setSkillsPaths] = useState<string[]>([]);
   const [skillsPathsInput, setSkillsPathsInput] = useState<string>('');
   const [skillsReloadFeedback, setSkillsReloadFeedback] = useState<string>('');
+  const [isEditingSkillsPaths, setIsEditingSkillsPaths] = useState<boolean>(false);
+  const [skillsPathsFetched, setSkillsPathsFetched] = useState<boolean>(false);
 
   // Animation states
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
@@ -315,13 +317,15 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
   }, [communicationMethods, isEditingUri, isEditingConnectionType, configFetched, getServerConfig]); // Add configFetched dependency
 
   useEffect(() => {
+    if (skillsPathsFetched || isEditingSkillsPaths) return;
     if (communicationMethods?.getSkillsPaths) {
       communicationMethods.getSkillsPaths().then((paths: string[]) => {
         setSkillsPaths(paths);
         setSkillsPathsInput(paths.join('\n'));
+        setSkillsPathsFetched(true);
       }).catch(() => {});
     }
-  }, [communicationMethods]);
+  }, []);
 
   // Set status message based on connection state
   useEffect(() => {
@@ -888,7 +892,11 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
                 </label>
                 <textarea
                   value={skillsPathsInput}
-                  onChange={(e) => setSkillsPathsInput(e.target.value)}
+                  onChange={(e) => {
+                    setSkillsPathsInput(e.target.value);
+                    setIsEditingSkillsPaths(true);
+                  }}
+                  onFocus={() => setIsEditingSkillsPaths(true)}
                   placeholder={"~/.agents/skills\n~/.claude/skills"}
                   rows={3}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent outline-none transition-all duration-200 hover:border-slate-400 dark:hover:border-slate-500 font-mono text-xs resize-none"
@@ -903,6 +911,7 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
                       if (communicationMethods?.updateSkillsPaths) {
                         await communicationMethods.updateSkillsPaths(paths);
                         setSkillsPaths(paths);
+                        setIsEditingSkillsPaths(false);
                       }
                     }}
                     variant="outline"
@@ -947,6 +956,8 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
                     if (serverConfig.connectionType) {
                       setConnectionType(serverConfig.connectionType);
                     }
+                    setIsEditingSkillsPaths(false);
+                    setSkillsPathsInput(skillsPaths.join('\n'));
                   }}
                   variant="outline"
                   size="sm"
