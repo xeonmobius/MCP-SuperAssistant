@@ -2,11 +2,11 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { LoggingMessageNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin.js';
-import type { WebSocketPluginConfig } from '../../types/config.js';
-import { WebSocketTransport } from './WebSocketTransport.js';
+import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin';
+import type { WebSocketPluginConfig } from '../../types/config';
+import { WebSocketTransport } from './WebSocketTransport';
 import { createLogger } from '@extension/shared/lib/logger';
-import { sanitizeTools } from '../../utils/sanitizeTool.js';
+import { sanitizeTools } from '../../utils/sanitizeTool';
 
 
 const logger = createLogger('WebSocketPlugin');

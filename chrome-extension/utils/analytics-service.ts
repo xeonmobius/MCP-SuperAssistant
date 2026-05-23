@@ -1,4 +1,4 @@
-import { sendAnalyticsEvent, collectDemographicData } from './analytics.js';
+import { sendAnalyticsEvent, collectDemographicData } from './analytics';
 import { createLogger } from '@extension/shared/lib/logger';
 
 const logger = createLogger('AnalyticsService');

@@ -1,1 +1,1 @@
-export type { ITransportPlugin, PluginMetadata, PluginConfig, TransportType } from '../types/plugin.js';
+export type { ITransportPlugin, PluginMetadata, PluginConfig, TransportType } from '../types/plugin';

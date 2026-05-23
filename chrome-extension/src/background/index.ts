@@ -17,8 +17,8 @@ import {
 } from '../mcpclient/index';
 import { sendAnalyticsEvent, trackError, collectDemographicData } from '../../utils/analytics';
 import { analyticsService } from '../../utils/analytics-service';
-import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths } from '../skills/loader.js';
-import { skillToPseudoTool, type Skill } from '../skills/parser.js';
+import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths } from '../skills/loader';
+import { skillToPseudoTool, type Skill } from '../skills/parser';
 
 // Import message types for type safety
 import type {

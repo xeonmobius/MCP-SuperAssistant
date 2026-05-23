@@ -1,4 +1,4 @@
-import { parseSkillMarkdown, type Skill } from './parser.js';
+import { parseSkillMarkdown, type Skill } from './parser';
 import { createLogger } from '@extension/shared/lib/logger';
 
 const logger = createLogger('SkillLoader');

@@ -2,19 +2,19 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { LoggingMessageNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import { EventEmitter } from './EventEmitter.js';
-import { PluginRegistry } from './PluginRegistry.js';
-import { SSEPlugin } from '../plugins/sse/SSEPlugin.js';
-import { WebSocketPlugin } from '../plugins/websocket/WebSocketPlugin.js';
-import { StreamableHttpPlugin } from '../plugins/streamable-http/StreamableHttpPlugin.js';
-import type { ClientConfig, ConnectionRequest } from '../types/config.js';
-import { DEFAULT_CLIENT_CONFIG } from '../types/config.js';
-import type { TransportType, ITransportPlugin, PluginConfig } from '../types/plugin.js';
-import type { Primitive, NormalizedTool, PrimitivesResponse } from '../types/primitives.js';
-import type { AllEvents } from '../types/events.js';
+import { EventEmitter } from './EventEmitter';
+import { PluginRegistry } from './PluginRegistry';
+import { SSEPlugin } from '../plugins/sse/SSEPlugin';
+import { WebSocketPlugin } from '../plugins/websocket/WebSocketPlugin';
+import { StreamableHttpPlugin } from '../plugins/streamable-http/StreamableHttpPlugin';
+import type { ClientConfig, ConnectionRequest } from '../types/config';
+import { DEFAULT_CLIENT_CONFIG } from '../types/config';
+import type { TransportType, ITransportPlugin, PluginConfig } from '../types/plugin';
+import type { Primitive, NormalizedTool, PrimitivesResponse } from '../types/primitives';
+import type { AllEvents } from '../types/events';
 import { createLogger } from '@extension/shared/lib/logger';
-import { analyticsService } from '../../../utils/analytics-service.js';
-import { sanitizeTool } from '../utils/sanitizeTool.js';
+import { analyticsService } from '../../../utils/analytics-service';
+import { sanitizeTool } from '../utils/sanitizeTool';
 
 
 const logger = createLogger('McpClient');

@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig, type PluginOption } from 'vite';
 import libAssetsPlugin from '@laynezh/vite-plugin-lib-assets';
-import makeManifestPlugin from './utils/plugins/make-manifest-plugin.js';
+import makeManifestPlugin from './utils/plugins/make-manifest-plugin';
 import { watchPublicPlugin, watchRebuildPlugin } from '@extension/hmr';
 import { watchOption } from '@extension/vite-config';
 import env, { IS_DEV, IS_PROD } from '@extension/env';
@@ -24,6 +24,16 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: 'resolve-js-to-ts',
+      enforce: 'pre',
+      resolveId(source, importer) {
+        if (!importer || !source.startsWith('.') || !source.endsWith('.js')) return;
+        if (importer.includes('node_modules') || importer.includes('/dist/')) return;
+        const tsPath = source.replace(/\.js$/, '.ts');
+        return this.resolve(tsPath, importer, { skipSelf: true });
+      },
+    },
     libAssetsPlugin({
       outputPath: outDir,
     }) as PluginOption,

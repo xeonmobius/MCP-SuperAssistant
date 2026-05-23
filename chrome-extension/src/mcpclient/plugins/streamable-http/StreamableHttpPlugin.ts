@@ -1,9 +1,9 @@
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin.js';
+import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin';
 import { createLogger } from '@extension/shared/lib/logger';
-import { sanitizeTools } from '../../utils/sanitizeTool.js';
+import { sanitizeTools } from '../../utils/sanitizeTool';
 
 
 const logger = createLogger('StreamableHttpPlugin');

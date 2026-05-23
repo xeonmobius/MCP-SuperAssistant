@@ -1,17 +1,17 @@
 // Core exports
-import { McpClient } from './core/McpClient.js';
-import { PluginRegistry } from './core/PluginRegistry.js';
-import { EventEmitter } from './core/EventEmitter.js';
+import { McpClient } from './core/McpClient';
+import { PluginRegistry } from './core/PluginRegistry';
+import { EventEmitter } from './core/EventEmitter';
 
 // Plugin implementations
-import { SSEPlugin } from './plugins/sse/SSEPlugin.js';
-import { WebSocketPlugin } from './plugins/websocket/WebSocketPlugin.js';
-import { WebSocketTransport } from './plugins/websocket/WebSocketTransport.js';
+import { SSEPlugin } from './plugins/sse/SSEPlugin';
+import { WebSocketPlugin } from './plugins/websocket/WebSocketPlugin';
+import { WebSocketTransport } from './plugins/websocket/WebSocketTransport';
 
 // Configuration
-import { DEFAULT_CLIENT_CONFIG } from './types/config.js';
+import { DEFAULT_CLIENT_CONFIG } from './types/config';
 import { createLogger } from '@extension/shared/lib/logger';
-import { sanitizeTool } from './utils/sanitizeTool.js';
+import { sanitizeTool } from './utils/sanitizeTool';
 
 // Export core classes
 
@@ -31,7 +31,7 @@ export type {
   PluginMetadata, 
   PluginConfig, 
   TransportType 
-} from './types/plugin.js';
+} from './types/plugin';
 
 export type { 
   ClientConfig, 
@@ -39,7 +39,7 @@ export type {
   SSEPluginConfig, 
   WebSocketPluginConfig, 
   GlobalConfig 
-} from './types/config.js';
+} from './types/config';
 
 export type { 
   Primitive, 
@@ -47,9 +47,9 @@ export type {
   PrimitivesResponse, 
   ToolCallRequest, 
   ToolCallResult 
-} from './types/primitives.js';
+} from './types/primitives';
 
-export type { AllEvents } from './types/events.js';
+export type { AllEvents } from './types/events';
 
 // Singleton client instance for backward compatibility
 let globalClient: McpClient | null = null;

@@ -3,10 +3,10 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { LoggingMessageNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin.js';
-import type { SSEPluginConfig } from '../../types/config.js';
+import type { ITransportPlugin, PluginMetadata, PluginConfig } from '../../types/plugin';
+import type { SSEPluginConfig } from '../../types/config';
 import { createLogger } from '@extension/shared/lib/logger';
-import { sanitizeTools } from '../../utils/sanitizeTool.js';
+import { sanitizeTools } from '../../utils/sanitizeTool';
 
 
 const logger = createLogger('SSEPlugin');

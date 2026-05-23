@@ -1,9 +1,9 @@
-import { EventEmitter } from './EventEmitter.js';
-import type { ITransportPlugin, TransportType, PluginConfig } from '../types/plugin.js';
-import type { RegistryEvents } from '../types/events.js';
-import { SSEPlugin } from '../plugins/sse/SSEPlugin.js';
-import { WebSocketPlugin } from '../plugins/websocket/WebSocketPlugin.js';
-import { StreamableHttpPlugin } from '../plugins/streamable-http/StreamableHttpPlugin.js';
+import { EventEmitter } from './EventEmitter';
+import type { ITransportPlugin, TransportType, PluginConfig } from '../types/plugin';
+import type { RegistryEvents } from '../types/events';
+import { SSEPlugin } from '../plugins/sse/SSEPlugin';
+import { WebSocketPlugin } from '../plugins/websocket/WebSocketPlugin';
+import { StreamableHttpPlugin } from '../plugins/streamable-http/StreamableHttpPlugin';
 import { createLogger } from '@extension/shared/lib/logger';
 
 

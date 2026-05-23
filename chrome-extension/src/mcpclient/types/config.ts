@@ -1,4 +1,4 @@
-import type { TransportType, PluginConfig } from './plugin.js';
+import type { TransportType, PluginConfig } from './plugin';
 
 export interface GlobalConfig {
   timeout: number;

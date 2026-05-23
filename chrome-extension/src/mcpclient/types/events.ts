@@ -1,4 +1,4 @@
-import type { ITransportPlugin, TransportType } from './plugin.js';
+import type { ITransportPlugin, TransportType } from './plugin';
 
 export interface ClientEvents {
   'client:initialized': { config: any };
