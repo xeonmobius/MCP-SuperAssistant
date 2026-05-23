@@ -4,6 +4,7 @@ import { useTheme, useSidebarState, useUserPreferences, useConnectionStatus } fr
 import { useUIStore } from '@src/stores/ui.store';
 import ServerStatus from './ServerStatus/ServerStatus';
 import AvailableTools from './AvailableTools/AvailableTools';
+import AvailableSkills from './AvailableSkills/AvailableSkills';
 import InstructionManager from './Instructions/InstructionManager';
 import InputArea from './InputArea/InputArea';
 import Settings from './Settings/Settings';
@@ -893,6 +894,12 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                       onRefresh={handleRefreshTools}
                       isRefreshing={isRefreshing}
                     />
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 mt-3">
+                  <CardContent className="p-0">
+                    <AvailableSkills />
                   </CardContent>
                 </Card>
               </div>

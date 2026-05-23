@@ -23,6 +23,7 @@ export interface ToolPermission {
 const STORAGE_KEY = 'mcp_sidebar_preferences';
 const TOOL_PERMISSIONS_KEY = 'mcp_tool_permissions';
 const TOOL_ENABLEMENT_KEY = 'mcp_tool_enablement';
+const SKILL_ENABLEMENT_KEY = 'mcp_skill_enablement';
 
 // Default preferences
 const DEFAULT_PREFERENCES: SidebarPreferences = {
@@ -248,5 +249,42 @@ export const clearToolEnablementState = async (): Promise<void> => {
     logMessage('[Storage] Cleared tool enablement state from storage');
   } catch (error) {
     logMessage(`[Storage] Error clearing tool enablement state: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+export const getSkillEnablementState = async (): Promise<Set<string>> => {
+  try {
+    if (!chrome.storage || !chrome.storage.local) {
+      logMessage('[Storage] Chrome storage API not available');
+      return new Set();
+    }
+
+    const result = await chrome.storage.local.get(SKILL_ENABLEMENT_KEY);
+    const enabledArray = result && typeof result === 'object' ? (result[SKILL_ENABLEMENT_KEY] as string[]) : undefined;
+
+    if (!enabledArray || !Array.isArray(enabledArray)) {
+      return new Set();
+    }
+
+    logMessage(`[Storage] Retrieved skill enablement state: ${enabledArray.length} enabled skills`);
+    return new Set(enabledArray);
+  } catch (error) {
+    logMessage(`[Storage] Error retrieving skill enablement state: ${error instanceof Error ? error.message : String(error)}`);
+    return new Set();
+  }
+};
+
+export const saveSkillEnablementState = async (enabledSkills: Set<string>): Promise<void> => {
+  try {
+    if (!chrome.storage || !chrome.storage.local) {
+      logMessage('[Storage] Chrome storage API not available');
+      return;
+    }
+
+    const enabledArray = Array.from(enabledSkills);
+    await chrome.storage.local.set({ [SKILL_ENABLEMENT_KEY]: enabledArray });
+    logMessage(`[Storage] Saved skill enablement state: ${enabledArray.length} enabled skills`);
+  } catch (error) {
+    logMessage(`[Storage] Error saving skill enablement state: ${error instanceof Error ? error.message : String(error)}`);
   }
 };

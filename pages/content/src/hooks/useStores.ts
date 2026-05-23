@@ -2,6 +2,7 @@
 import { useAppStore } from '../stores/app.store';
 import { useConnectionStore } from '../stores/connection.store';
 import { useToolStore } from '../stores/tool.store';
+import { useSkillStore } from '../stores/skill.store';
 import type { AppState } from '../stores/app.store';
 import { useUIStore } from '../stores/ui.store';
 import { useAdapterStore } from '../stores/adapter.store';
@@ -116,6 +117,21 @@ export const useToolEnablement = () =>
       disableAllTools: state.disableAllTools,
       isToolEnabled: state.isToolEnabled,
       loadToolEnablementState: state.loadToolEnablementState
+    })
+  ));
+
+export const useSkillEnablement = () =>
+  useSkillStore(useShallow(
+    (state) => ({
+      availableSkills: state.availableSkills,
+      enabledSkills: state.enabledSkills,
+      isLoadingEnablement: state.isLoadingEnablement,
+      setAvailableSkills: state.setAvailableSkills,
+      enableSkill: state.enableSkill,
+      disableSkill: state.disableSkill,
+      enableAllSkills: state.enableAllSkills,
+      disableAllSkills: state.disableAllSkills,
+      isSkillEnabled: state.isSkillEnabled,
     })
   ));
 

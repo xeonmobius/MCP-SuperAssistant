@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useMemo } from 'react';
 import { mcpClient } from '../core/mcp-client';
 import { useConnectionStatus, useAvailableTools, useServerConfig, useToolEnablement } from './useStores';
 import { useToolStore } from '../stores/tool.store';
+import { useSkillStore } from '../stores/skill.store';
 import { logMessage } from '../utils/helpers';
 import type { ServerConfig, Tool, ConnectionType } from '../types/stores';
 
@@ -117,10 +118,23 @@ export const useMcpCommunication = () => {
         logMessage(`[useMcpCommunication] Filtered out ${updated.length - validatedTools.length} invalid tools`);
       }
 
-      toolActions.setAvailableTools(validatedTools);
-      logMessage(`[useMcpCommunication] Successfully refreshed ${validatedTools.length} tools`);
+      const skillTools = validatedTools.filter(tool => tool.name.startsWith('skill_'));
+      const mcpTools = validatedTools.filter(tool => !tool.name.startsWith('skill_'));
 
-      return validatedTools;
+      if (skillTools.length > 0) {
+        const skillItems = skillTools.map(t => ({
+          name: t.name.replace(/^skill_/, '').replace(/_/g, '-'),
+          description: t.description || '',
+        }));
+        useSkillStore.getState().setAvailableSkills(skillItems);
+      } else {
+        useSkillStore.getState().setAvailableSkills([]);
+      }
+
+      toolActions.setAvailableTools(mcpTools);
+      logMessage(`[useMcpCommunication] Refreshed ${mcpTools.length} tools, ${skillTools.length} skills`);
+
+      return mcpTools;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logMessage(`[useMcpCommunication] Tool refresh failed: ${errorMessage}`);
@@ -274,27 +288,33 @@ export const useMcpCommunication = () => {
 
   // Normalize tools for consistent interface across components - MEMOIZED to prevent unnecessary re-renders
   const normalizedTools = useMemo(() => {
-    // First normalize the tools structure
     const normalized = tools.map((tool: Tool) => ({
       name: tool.name,
       description: tool.description || '',
-      // Ensure schema is always a string for legacy compatibility
       schema: typeof (tool as any).schema === 'string'
         ? (tool as any).schema
         : JSON.stringify(tool.input_schema || {}),
-      // Keep original input_schema for new components
       input_schema: tool.input_schema
     }));
     
-    // Then filter out disabled tools
     const enabledTools = normalized.filter(tool => isToolEnabled(tool.name));
-    
-    // Only log when tools actually change (not on every render)
-    if (enabledTools.length > 0) {
-      logMessage(`[useMcpCommunication] Tools normalized and filtered: ${enabledTools.length}/${normalized.length} enabled`);
+
+    const skillState = useSkillStore.getState();
+    const enabledSkills = skillState.availableSkills.filter(s => skillState.enabledSkills.has(s.name));
+    const skillToolEntries = enabledSkills.map(s => ({
+      name: `skill_${s.name.replace(/-/g, '_')}`,
+      description: s.description || '',
+      schema: JSON.stringify({ type: 'object', properties: { query: { type: 'string', description: `Query for ${s.name}` } } }),
+      input_schema: { type: 'object', properties: { query: { type: 'string', description: `Query for ${s.name}` } } },
+    }));
+
+    const combined = [...enabledTools, ...skillToolEntries];
+
+    if (combined.length > 0) {
+      logMessage(`[useMcpCommunication] Tools+skills: ${enabledTools.length} tools, ${skillToolEntries.length} skills enabled`);
     }
     
-    return enabledTools;
+    return combined;
   }, [tools, isToolEnabled]);
 
   // Throttled debug logging to prevent spam - only log significant changes
