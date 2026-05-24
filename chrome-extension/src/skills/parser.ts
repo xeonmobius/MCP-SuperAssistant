@@ -10,6 +10,7 @@ export interface Skill {
   content: string;
   allowedTools?: string;
   source: string;
+  sourceDir?: string;
 }
 
 export interface SkillToolResult {

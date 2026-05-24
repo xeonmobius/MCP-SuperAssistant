@@ -150,20 +150,15 @@ export async function loadSkillsFromFilesystemServer(
             if (content) {
               const skill = parseSkillMarkdown(content, `filesystem:${skillFilePath}`);
               if (skill) {
+                const skillDirPath = `${expandedPath}/${dirName}`;
+                skill.sourceDir = skillDirPath;
                 try {
-                  const skillDirPath = `${expandedPath}/${dirName}`;
-                  const dirListResult = await callTool(serverUrl, 'list_directory', { path: skillDirPath });
-                  const dirEntries = extractTextFromToolResult(dirListResult)?.split('\n') || [];
-                  const files = dirEntries
-                    .filter(e => /\[FILE\]/.test(e))
-                    .map(e => e.replace(/\[FILE\]\s+/, '').trim())
-                    .filter(f => f !== 'SKILL.md');
+                  const allFiles = await listAllFiles(serverUrl, callTool, skillDirPath, 'SKILL.md');
 
-                  if (files.length > 0) {
-                    const fullPaths = files.map(f => `${skillDirPath}/${f}`);
-                    skill.content += `\n\n---\n\nAvailable files in this skill directory:\n${
-                      fullPaths.map(f => `- ${f}`).join('\n')
-                    }\n\nUse the \`read_text_file\` tool with any of the above paths to load files on demand.`;
+                  if (allFiles.length > 0) {
+                    skill.content += `\n\n---\n\nAvailable files in this skill directory (use \`skill_read_asset\` to load any file):\n${
+                      allFiles.map(f => `- ${f}`).join('\n')
+                    }`;
                   }
                 } catch {
                   logger.debug(`[SkillLoader] Could not list files in ${dirName}`);
@@ -194,6 +189,43 @@ function getHomeDir(): string {
   if (typeof process !== 'undefined' && process.env?.HOME) return process.env.HOME;
   if (typeof navigator !== 'undefined' && (navigator as any).userAgent?.includes('Mac')) return '/Users';
   return '/home';
+}
+
+async function listAllFiles(
+  serverUrl: string,
+  callTool: ToolCaller,
+  dirPath: string,
+  excludeFile?: string,
+  prefix: string = '',
+): Promise<string[]> {
+  const files: string[] = [];
+  try {
+    const result = await callTool(serverUrl, 'list_directory', { path: dirPath });
+    const entries = extractTextFromToolResult(result)?.split('\n') || [];
+
+    for (const entry of entries) {
+      const fileMatch = entry.match(/\[FILE\]\s+(.+)/);
+      if (fileMatch) {
+        const name = fileMatch[1].trim();
+        if (name !== excludeFile) {
+          files.push(prefix ? `${prefix}/${name}` : name);
+        }
+        continue;
+      }
+
+      const dirMatch = entry.match(/\[DIR\]\s+(.+)/);
+      if (dirMatch) {
+        const subDirName = dirMatch[1].trim();
+        const subDirPath = `${dirPath}/${subDirName}`;
+        const subPrefix = prefix ? `${prefix}/${subDirName}` : subDirName;
+        const subFiles = await listAllFiles(serverUrl, callTool, subDirPath, excludeFile, subPrefix);
+        files.push(...subFiles);
+      }
+    }
+  } catch {
+    // skip unreadable directories
+  }
+  return files;
 }
 
 function extractTextFromToolResult(result: any): string | null {
@@ -240,6 +272,7 @@ export async function persistSkills(skills: Skill[]): Promise<void> {
       content: s.content,
       allowedTools: s.allowedTools,
       source: s.source,
+      sourceDir: s.sourceDir,
     }));
     await chrome.storage.local.set({ mcp_skills: serializable });
     cachedSkills = skills;

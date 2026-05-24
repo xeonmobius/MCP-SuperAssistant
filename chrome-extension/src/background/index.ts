@@ -19,6 +19,7 @@ import { sendAnalyticsEvent, trackError, collectDemographicData } from '../../ut
 import { analyticsService } from '../../utils/analytics-service';
 import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths } from '../skills/loader';
 import { skillToPseudoTool, type Skill } from '../skills/parser';
+import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 
 // Import message types for type safety
 import type {
@@ -109,6 +110,19 @@ async function waitForInitialization(): Promise<void> {
  */
 function getServerUrl(): string {
   return serverUrl;
+}
+
+function extractTextFromCallResult(result: any): string | null {
+  if (!result) return null;
+  if (typeof result === 'string') return result;
+  if (result.content && Array.isArray(result.content)) {
+    return result.content
+      .filter((c: any) => c.type === 'text')
+      .map((c: any) => c.text)
+      .join('\n');
+  }
+  if (result.text) return result.text;
+  return null;
 }
 
 /**
@@ -731,7 +745,37 @@ async function handleMcpMessage(
           throw new Error('Tool name is required');
         }
 
-        if (toolName.startsWith('skill_')) {
+        if (toolName === 'skill_read_asset') {
+          const { skill_name, file_path } = (args || {}) as { skill_name?: string; file_path?: string };
+          if (!skill_name || !file_path) {
+            result = { content: [{ type: 'text', text: 'skill_read_asset requires skill_name and file_path parameters' }], isError: true };
+          } else {
+            const skills = getCachedSkills();
+            const skill = skills.find(s => s.name === skill_name);
+            if (!skill || !skill.sourceDir) {
+              result = { content: [{ type: 'text', text: `Skill "${skill_name}" not found or has no source directory` }], isError: true };
+            } else {
+              const resolvedPath = resolveSkillAssetPath(skill.sourceDir, file_path);
+              if (!isPathWithinSkillDir(skill.sourceDir, resolvedPath)) {
+                result = { content: [{ type: 'text', text: `Path "${file_path}" is outside the skill directory` }], isError: true };
+              } else {
+                try {
+                  const serverUrl = getServerUrl();
+                  const readResult = await callToolWithBackwardsCompatibility(serverUrl, 'read_text_file', { path: resolvedPath });
+                  const fileContent = extractTextFromCallResult(readResult);
+                  if (fileContent) {
+                    result = { content: [{ type: 'text', text: fileContent }] };
+                    logger.debug(`[Background] Read skill asset: ${file_path} from ${skill_name}`);
+                  } else {
+                    result = { content: [{ type: 'text', text: `Failed to read file "${file_path}": empty result` }], isError: true };
+                  }
+                } catch (err) {
+                  result = { content: [{ type: 'text', text: `Failed to read file "${file_path}": ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+                }
+              }
+            }
+          }
+        } else if (toolName.startsWith('skill_')) {
           logger.debug(`[Background] Intercepting skill tool call: ${toolName}`);
           const skillName = toolName.replace(/^skill_/, '').replace(/_/g, '-');
           const skills = getCachedSkills();

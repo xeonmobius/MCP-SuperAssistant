@@ -308,7 +308,28 @@ export const useMcpCommunication = () => {
       input_schema: { type: 'object', properties: { query: { type: 'string', description: `Query for ${s.name}` } } },
     }));
 
-    const combined = [...enabledTools, ...skillToolEntries];
+    const skillReadAssetTool = enabledSkills.length > 0 ? [{
+      name: 'skill_read_asset',
+      description: 'Read an external file from a skill directory. Use when a skill references files in its manifest that you need to load.',
+      schema: JSON.stringify({
+        type: 'object',
+        properties: {
+          skill_name: { type: 'string', description: 'Name of the skill that owns the file' },
+          file_path: { type: 'string', description: 'Relative path to the file within the skill directory (e.g., "references/api.md")' },
+        },
+        required: ['skill_name', 'file_path'],
+      }),
+      input_schema: {
+        type: 'object',
+        properties: {
+          skill_name: { type: 'string', description: 'Name of the skill that owns the file' },
+          file_path: { type: 'string', description: 'Relative path to the file within the skill directory (e.g., "references/api.md")' },
+        },
+        required: ['skill_name', 'file_path'],
+      },
+    }] : [];
+
+    const combined = [...enabledTools, ...skillToolEntries, ...skillReadAssetTool];
 
     if (combined.length > 0) {
       logMessage(`[useMcpCommunication] Tools+skills: ${enabledTools.length} tools, ${skillToolEntries.length} skills enabled`);
