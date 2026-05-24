@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { generateInstructionsJson } from './instructionGeneratorJson';
 import { useUserPreferences, useToolEnablement } from '../../../hooks';
 import { useToolStore } from '../../../stores/tool.store';
+import { useSkillStore } from '../../../stores/skill.store';
 import { Typography } from '../ui';
 import { cn } from '@src/lib/utils';
 import { logMessage } from '@src/utils/helpers';
@@ -128,20 +129,32 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
     return tools.map(tool => `${tool.name}:${tool.description || ''}`).sort().join('|');
   }, [tools]);
 
+  const isSkillToolEnabled = useCallback((toolName: string) => {
+    const skillName = toolName.replace(/^skill_/, '').replace(/_/g, '-');
+    return useSkillStore.getState().enabledSkills.has(skillName);
+  }, []);
+
+  const isEnabled = useCallback((toolName: string) => {
+    if (toolName.startsWith('skill_')) {
+      return isSkillToolEnabled(toolName);
+    }
+    return isToolEnabled(toolName);
+  }, [isToolEnabled, isSkillToolEnabled]);
+
   // Memoize enabled tools signature to track changes in tool enablement
   const enabledToolsSignature = useMemo(() => {
     const enabledToolNames = tools
-      .filter(tool => isToolEnabled(tool.name))
+      .filter(tool => isEnabled(tool.name))
       .map(tool => tool.name)
       .sort()
       .join('|');
     return enabledToolNames;
-  }, [tools, isToolEnabled]);
+  }, [tools, isEnabled]);
 
   // Filter tools to only include enabled ones for instruction generation
   const enabledTools = useMemo(() => {
-    return tools.filter(tool => isToolEnabled(tool.name));
-  }, [tools, isToolEnabled]);
+    return tools.filter(tool => isEnabled(tool.name));
+  }, [tools, isEnabled]);
 
   // Memoize custom instructions key to prevent unnecessary updates
   const customInstructionsKey = useMemo(() => {
