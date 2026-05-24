@@ -175,7 +175,8 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
     //   return generateInstructions(enabledTools, customInstructions, customInstructionsEnabled);
     // }
 
-    return generateInstructionsJson(enabledTools, customInstructions, customInstructionsEnabled);
+    const enabledSkillTools = enabledTools.filter(t => t.name.startsWith('skill_'));
+    return generateInstructionsJson(enabledTools, customInstructions, customInstructionsEnabled, enabledSkillTools);
   }, [enabledTools, customInstructions, customInstructionsEnabled]);
 
   // Memoize the actual current instructions to prevent unnecessary re-calculations

@@ -18,8 +18,14 @@ export const generateInstructionsJson = (
   tools: Array<{ name: string; schema: string; description: string }>,
   customInstructions?: string,
   customInstructionsEnabled?: boolean,
+  skills?: Array<{ name: string; schema: string; description: string }>,
 ): string => {
-  if (!tools || tools.length === 0) {
+  const allTools = tools || [];
+  const skillNames = new Set((skills || []).map(s => s.name));
+  const mcpTools = allTools.filter(t => !skillNames.has(t.name));
+  const enabledSkills = skills || [];
+
+  if (!allTools || allTools.length === 0) {
     return '# No tools available\n\nConnect to the MCP server to see available tools.';
   }
 
@@ -198,7 +204,7 @@ ClassName | Custom class | User
   instructions += '## AVAILABLE TOOLS FOR SUPERASSISTANT\n\n';
 
   // Add each tool with its schema
-  tools.forEach(tool => {
+  mcpTools.forEach(tool => {
     instructions += ` - ${tool.name}\n`;
 
     try {
@@ -293,7 +299,14 @@ ClassName | Custom class | User
     }
   });
 
-  // instructions += 'Print it exactly, there is a capturing tool which needs prinited text to run the tool manually\n\n';
+  if (enabledSkills.length > 0) {
+    instructions += '\n## AVAILABLE SKILLS\n\n';
+    instructions += 'Skills are specialized capabilities you can invoke. Invoke the skill tool to load its full instructions and follow them exactly.\n\n';
+    enabledSkills.forEach(skill => {
+      instructions += ` - **${skill.name}**: ${skill.description}\n`;
+    });
+    instructions += '\n';
+  }
 
   //add custom instructions code here
   // Add custom instructions if enabled and available
