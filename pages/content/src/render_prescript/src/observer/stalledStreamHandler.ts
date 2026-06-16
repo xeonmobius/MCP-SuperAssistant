@@ -372,11 +372,13 @@ export const startStalledStreamDetection = (): void => {
   // Add styles for the stalled state
   addStalledStreamStyles();
 
-  // Set up detection at the configured interval
-  // stalledStreamCheckTimer = setInterval(
-  //     checkStalledStreams,
-  //     CONFIG.stalledStreamCheckInterval
-  // );
+  // Set up detection at the configured interval.
+  // (Was commented out — left stalled-stream detection dead. checkStalledStreams
+  //  detects streams that stopped receiving tokens and flags them.)
+  stalledStreamCheckTimer = setInterval(
+    checkStalledStreams,
+    CONFIG.stalledStreamCheckInterval,
+  );
 
   // Detect pre-existing incomplete blocks on startup
   detectPreExistingIncompleteBlocks();

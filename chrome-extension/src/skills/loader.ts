@@ -104,7 +104,38 @@ export async function loadSkillsFromEndpoint(proxyUrl: string): Promise<Skill[]>
   return skills;
 }
 
+const FILESYSTEM_TOOL_PREFIX = 'filesystem.';
+
 type ToolCaller = (serverUrl: string, toolName: string, args: Record<string, unknown>) => Promise<any>;
+
+/**
+ * Parse the raw text returned by the filesystem server's `list_allowed_directories`
+ * tool. The server prepends a human-readable `Allowed directories:` header and
+ * indents each path; that header must NOT survive as a phantom allowed-directory
+ * entry (it would corrupt home-dir inference and path matching). Only keep
+ * entries that look like filesystem paths (absolute or `~`-prefixed).
+ */
+export function parseAllowedDirectories(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split('\n')
+    .map(d => d.trim())
+    .filter(d => Boolean(d) && /^(\/|~)/.test(d));
+}
+
+/**
+ * True if `p` is equal to, or nested beneath, one of `allowedDirs`. Uses a path
+ * BOUNDARY check (`p === d || p.startsWith(d + '/')`) so a short allowed dir
+ * like `/Users/sha` can NOT grant access to `/Users/shannon/...`. `~`-prefixed
+ * allowed dirs are expanded when `homeDir` is supplied.
+ */
+export function isPathWithinAllowed(p: string, allowedDirs: string[], homeDir?: string): boolean {
+  const expand = (d: string) => (homeDir && d.startsWith('~') ? d.replace(/^~/, homeDir) : d);
+  return allowedDirs.some(d => {
+    const dir = expand(d).replace(/\/+$/, '');
+    return p === dir || p.startsWith(`${dir}/`);
+  });
+}
 
 export async function loadSkillsFromFilesystemServer(
   serverUrl: string,
@@ -116,15 +147,12 @@ export async function loadSkillsFromFilesystemServer(
     const skillsPaths = await getSkillsPaths();
     if (skillsPaths.length === 0) return skills;
 
-    const hasListDirectory = await callTool(serverUrl, 'list_allowed_directories', {});
-    const allowedDirs: string[] = extractTextFromToolResult(hasListDirectory)
-      ?.split('\n')
-      .map((d: string) => d.trim())
-      .filter(Boolean) || [];
+    const hasListDirectory = await callTool(serverUrl, `${FILESYSTEM_TOOL_PREFIX}list_allowed_directories`, {});
+    const allowedDirs: string[] = parseAllowedDirectories(extractTextFromToolResult(hasListDirectory));
 
-    const accessiblePaths = skillsPaths.filter(p =>
-      allowedDirs.some(d => p.startsWith(d) || p.startsWith(d.replace(/^~/, '')))
-    );
+    const homeDir = inferHomeDirFromAllowedDirs(allowedDirs);
+    const expandedPaths = skillsPaths.map(p => p.startsWith('~') ? p.replace(/^~/, homeDir) : p);
+    const accessiblePaths = expandedPaths.filter(p => isPathWithinAllowed(p, allowedDirs, homeDir));
 
     if (accessiblePaths.length === 0) {
       logger.debug('[SkillLoader] No skills paths within filesystem server allowed directories');
@@ -134,7 +162,7 @@ export async function loadSkillsFromFilesystemServer(
     for (const skillsPath of accessiblePaths) {
       try {
         const expandedPath = skillsPath.replace(/^~/, getHomeDir());
-        const listResult = await callTool(serverUrl, 'list_directory', { path: expandedPath });
+        const listResult = await callTool(serverUrl, `${FILESYSTEM_TOOL_PREFIX}list_directory`, { path: expandedPath });
         const entries = extractTextFromToolResult(listResult)?.split('\n') || [];
 
         for (const entry of entries) {
@@ -145,7 +173,7 @@ export async function loadSkillsFromFilesystemServer(
           const skillFilePath = `${expandedPath}/${dirName}/SKILL.md`;
 
           try {
-            const readResult = await callTool(serverUrl, 'read_text_file', { path: skillFilePath });
+            const readResult = await callTool(serverUrl, `${FILESYSTEM_TOOL_PREFIX}read_text_file`, { path: skillFilePath });
             const content = extractTextFromToolResult(readResult);
             if (content) {
               const skill = parseSkillMarkdown(content, `filesystem:${skillFilePath}`);
@@ -191,16 +219,30 @@ function getHomeDir(): string {
   return '/home';
 }
 
-async function listAllFiles(
+function inferHomeDirFromAllowedDirs(allowedDirs: string[]): string {
+  for (const dir of allowedDirs) {
+    const match = dir.match(/^(\/Users\/[^/]+)/);
+    if (match) return match[1];
+  }
+  for (const dir of allowedDirs) {
+    const match = dir.match(/^(\/home\/[^/]+)/);
+    if (match) return match[1];
+  }
+  return getHomeDir();
+}
+
+export async function listAllFiles(
   serverUrl: string,
   callTool: ToolCaller,
   dirPath: string,
   excludeFile?: string,
   prefix: string = '',
+  maxDepth: number = 10,
+  depth: number = 0,
 ): Promise<string[]> {
   const files: string[] = [];
   try {
-    const result = await callTool(serverUrl, 'list_directory', { path: dirPath });
+    const result = await callTool(serverUrl, `${FILESYSTEM_TOOL_PREFIX}list_directory`, { path: dirPath });
     const entries = extractTextFromToolResult(result)?.split('\n') || [];
 
     for (const entry of entries) {
@@ -216,9 +258,15 @@ async function listAllFiles(
       const dirMatch = entry.match(/\[DIR\]\s+(.+)/);
       if (dirMatch) {
         const subDirName = dirMatch[1].trim();
+        // Guard against symlink loops / pathological depth that would otherwise
+        // hang the loader (or overflow the stack) before skills are shown.
+        if (depth >= maxDepth) {
+          logger.debug(`[SkillLoader] maxDepth (${maxDepth}) reached at ${dirPath}/${subDirName}, skipping`);
+          continue;
+        }
         const subDirPath = `${dirPath}/${subDirName}`;
         const subPrefix = prefix ? `${prefix}/${subDirName}` : subDirName;
-        const subFiles = await listAllFiles(serverUrl, callTool, subDirPath, excludeFile, subPrefix);
+        const subFiles = await listAllFiles(serverUrl, callTool, subDirPath, excludeFile, subPrefix, maxDepth, depth + 1);
         files.push(...subFiles);
       }
     }

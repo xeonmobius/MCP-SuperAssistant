@@ -42,7 +42,7 @@ export const DEFAULT_CONFIG: FunctionCallRendererConfig = {
   maxContentPreviewLength: Number.MAX_SAFE_INTEGER,
   usePositionFixed: false,
   stabilizeTimeout: 500,
-  debug: true,
+  debug: false,
   // Theme detection
   useHostTheme: true,
   // Stalled stream detection - defaults

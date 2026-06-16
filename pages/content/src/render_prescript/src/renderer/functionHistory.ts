@@ -99,10 +99,15 @@ export const updateHistoryPanel = (
   // Format the execution time
   const executionTime = formatExecutionTime(executionData.executedAt);
 
+  // Build the shell with innerHTML, then inject the (untrusted, parsed-from-page)
+  // values via textContent to avoid HTML metacharacter injection.
   executionInfo.innerHTML = `
-    <div>Function: <strong>${executionData.functionName}</strong></div>
-    <div>Last executed: <strong>${executionTime}</strong></div>
+    <div>Function: <strong></strong></div>
+    <div>Last executed: <strong></strong></div>
   `;
+  const strongs = executionInfo.querySelectorAll('strong');
+  strongs[0].textContent = executionData.functionName ?? '';
+  strongs[1].textContent = executionTime;
   historyPanel.appendChild(executionInfo);
 
   // Create re-execute button

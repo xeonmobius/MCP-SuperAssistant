@@ -1,5 +1,6 @@
 import { CONFIG } from '../core/config';
 import { applyThemeClass, isDarkTheme } from '../utils/themeDetector';
+import { extractSystemMessage } from '../utils/systemTag';
 import { createLogger } from '@extension/shared/lib/logger';
 
 // State management for rendered elements
@@ -382,10 +383,11 @@ export const renderFunctionResult = (block: HTMLElement, isProcessingRef: { curr
 
     // Check if it contains MCP SuperAssistant system message tags
     if (content.includes('<SYSTEM>') || content.includes('</SYSTEM>') || content.includes('<system>') || content.includes('</system>')) {
-      // Extract content between SYSTEM tags
-      const systemMatch = content;
-      if (systemMatch) {
-        const systemContent = systemMatch.trim();
+      // Extract ONLY the text between the tags (previously this assigned the
+      // entire block text, so any block containing a stray system tag was fully
+      // replaced with a system-message box).
+      const systemContent = extractSystemMessage(content);
+      if (systemContent) {
         renderSystemMessageBox(block, systemContent);
         return true;
       }

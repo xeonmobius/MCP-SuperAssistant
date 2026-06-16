@@ -1,6 +1,7 @@
 import { contextBridge } from './context-bridge';
 import { useConnectionStore } from '../stores/connection.store';
 import { useToolStore } from '../stores/tool.store';
+import { useSkillStore } from '../stores/skill.store';
 import { eventBus } from '../events/event-bus';
 import type { ServerConfig, ConnectionStatus } from '../types/stores';
 import { logMessage } from '../utils/helpers';
@@ -280,6 +281,16 @@ class McpClient {
 
   /**
    * Handle tool updates from background script
+   *
+   * The background script can broadcast tool lists at different points in the
+   * connection lifecycle. Early broadcasts contain only raw MCP tools; the
+   * follow-up broadcast (after skills load) also carries `skill_*` pseudo-tools.
+   *
+   * Skill pseudo-tools are split out into the dedicated skill store (the UI
+   * reads the skill list from there). They are intentionally kept OUT of the
+   * MCP tool store. When a broadcast carries no skill tools we leave the
+   * existing skill list untouched rather than wiping it — the authoritative
+   * skill set arrives via the skills-inclusive broadcast / `mcp:get-tools`.
    */
   private handleToolUpdate(tools: any[]): void {
     logMessage(`[McpClient] Received tool update with ${tools.length} tools`);
@@ -293,8 +304,23 @@ class McpClient {
       schema: typeof tool.schema === 'string' ? tool.schema : JSON.stringify(tool.input_schema || {})
     }));
 
-    useToolStore.getState().setAvailableTools(normalizedTools);
-    eventBus.emit('tool:list-updated', { tools: normalizedTools });
+    const isSkillTool = (name: unknown) => typeof name === 'string' && name.startsWith('skill_');
+    const skillTools = normalizedTools.filter(tool => isSkillTool(tool.name));
+    const mcpTools = normalizedTools.filter(tool => !isSkillTool(tool.name));
+
+    if (skillTools.length > 0) {
+      useSkillStore.getState().setAvailableSkills(
+        skillTools.map(t => ({
+          // Prefer the original skill name stamped by skillToPseudoTool; the
+          // tool-name decode is lossy for names containing underscores.
+          name: (t as any)._skillName ?? t.name.replace(/^skill_/, '').replace(/_/g, '-'),
+          description: t.description,
+        })),
+      );
+    }
+
+    useToolStore.getState().setAvailableTools(mcpTools);
+    eventBus.emit('tool:list-updated', { tools: mcpTools });
   }
 
   /**
@@ -484,13 +510,32 @@ class McpClient {
         description: tool.description || '',
         input_schema: tool.input_schema || tool.schema || {},
         // Legacy support
-        schema: typeof tool.schema === 'string' ? tool.schema : JSON.stringify(tool.input_schema || {})
+        schema: typeof tool.schema === 'string' ? tool.schema : JSON.stringify(tool.input_schema || {}),
+        // Preserve the original skill name so consumers don't have to lossily
+        // decode underscores/hyphens back from the tool name.
+        ...(tool._skillName ? { _skillName: tool._skillName } : {}),
       }));
 
-      // Update store for consumers
-      useToolStore.getState().setAvailableTools(normalizedTools);
+      // Split skill pseudo-tools out: they belong in the skill store, NOT the
+      // MCP tool store. (Previously the unsplit list was written to the tool
+      // store, racing with handleToolUpdate and leaving duplicate skill entries.)
+      const isSkill = (n: unknown) => typeof n === 'string' && n.startsWith('skill_');
+      const skillTools = normalizedTools.filter(t => isSkill(t.name) && t.name !== 'skill_read_asset');
+      const mcpTools = normalizedTools.filter(t => !isSkill(t.name));
 
-      logMessage(`[McpClient] Retrieved ${normalizedTools.length} tools`);
+      if (skillTools.length > 0) {
+        useSkillStore.getState().setAvailableSkills(
+          skillTools.map(t => ({
+            name: (t as any)._skillName ?? t.name.replace(/^skill_/, '').replace(/_/g, '-'),
+            description: t.description,
+          })),
+        );
+      }
+
+      // Update store for consumers
+      useToolStore.getState().setAvailableTools(mcpTools);
+
+      logMessage(`[McpClient] Retrieved ${normalizedTools.length} tools (${mcpTools.length} tools, ${skillTools.length} skills)`);
       return normalizedTools;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

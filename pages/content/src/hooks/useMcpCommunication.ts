@@ -4,6 +4,7 @@ import { useConnectionStatus, useAvailableTools, useServerConfig, useToolEnablem
 import { useToolStore } from '../stores/tool.store';
 import { useSkillStore } from '../stores/skill.store';
 import { logMessage } from '../utils/helpers';
+import { buildCombinedToolList } from '../utils/toolList';
 import type { ServerConfig, Tool, ConnectionType } from '../types/stores';
 
 /**
@@ -27,6 +28,12 @@ export const useMcpCommunication = () => {
   const { config, setConfig } = useServerConfig();
   const { isToolEnabled, isLoadingEnablement } = useToolEnablement();
   const toolActions = useToolStore();
+
+  // Reactive skill-store slices. Subscribing here (rather than calling
+  // useSkillStore.getState() inside the memo) means toggling a skill updates
+  // `normalizedTools` and the new enabled/disabled set actually reaches the model.
+  const availableSkills = useSkillStore(s => s.availableSkills);
+  const enabledSkillNames = useSkillStore(s => s.enabledSkills);
 
   // Local state for operation tracking
   const [isInitialized, setIsInitialized] = useState(false);
@@ -286,57 +293,19 @@ export const useMcpCommunication = () => {
   /* Public interface with enhanced data normalization                      */
   /* ---------------------------------------------------------------------- */
 
-  // Normalize tools for consistent interface across components - MEMOIZED to prevent unnecessary re-renders
+  // Normalize tools for consistent interface across components - MEMOIZED to prevent unnecessary re-renders.
+  // Deps include the reactive skill-store slices so enable/disable toggles recompute the list.
   const normalizedTools = useMemo(() => {
-    const normalized = tools.map((tool: Tool) => ({
-      name: tool.name,
-      description: tool.description || '',
-      schema: typeof (tool as any).schema === 'string'
-        ? (tool as any).schema
-        : JSON.stringify(tool.input_schema || {}),
-      input_schema: tool.input_schema
-    }));
-    
-    const enabledTools = normalized.filter(tool => isToolEnabled(tool.name));
-
-    const skillState = useSkillStore.getState();
-    const enabledSkills = skillState.availableSkills.filter(s => skillState.enabledSkills.has(s.name));
-    const skillToolEntries = enabledSkills.map(s => ({
-      name: `skill_${s.name.replace(/-/g, '_')}`,
-      description: s.description || '',
-      schema: JSON.stringify({ type: 'object', properties: { query: { type: 'string', description: `Query for ${s.name}` } } }),
-      input_schema: { type: 'object', properties: { query: { type: 'string', description: `Query for ${s.name}` } } },
-    }));
-
-    const skillReadAssetTool = enabledSkills.length > 0 ? [{
-      name: 'skill_read_asset',
-      description: 'Read an external file from a skill directory. Use when a skill references files in its manifest that you need to load.',
-      schema: JSON.stringify({
-        type: 'object',
-        properties: {
-          skill_name: { type: 'string', description: 'Name of the skill that owns the file' },
-          file_path: { type: 'string', description: 'Relative path to the file within the skill directory (e.g., "references/api.md")' },
-        },
-        required: ['skill_name', 'file_path'],
-      }),
-      input_schema: {
-        type: 'object',
-        properties: {
-          skill_name: { type: 'string', description: 'Name of the skill that owns the file' },
-          file_path: { type: 'string', description: 'Relative path to the file within the skill directory (e.g., "references/api.md")' },
-        },
-        required: ['skill_name', 'file_path'],
-      },
-    }] : [];
-
-    const combined = [...enabledTools, ...skillToolEntries, ...skillReadAssetTool];
+    const combined = buildCombinedToolList(tools, isToolEnabled, availableSkills, enabledSkillNames);
 
     if (combined.length > 0) {
-      logMessage(`[useMcpCommunication] Tools+skills: ${enabledTools.length} tools, ${skillToolEntries.length} skills enabled`);
+      const toolCount = combined.filter(t => !t.name.startsWith('skill_')).length;
+      const skillCount = combined.filter(t => t.name.startsWith('skill_') && t.name !== 'skill_read_asset').length;
+      logMessage(`[useMcpCommunication] Tools+skills: ${toolCount} tools, ${skillCount} skills enabled`);
     }
-    
+
     return combined;
-  }, [tools, isToolEnabled]);
+  }, [tools, isToolEnabled, availableSkills, enabledSkillNames]);
 
   // Throttled debug logging to prevent spam - only log significant changes
   useEffect(() => {

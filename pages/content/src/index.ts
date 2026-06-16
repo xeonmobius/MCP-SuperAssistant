@@ -130,33 +130,39 @@ try {
   );
 }
 
-// Set up URL change detection
-setInterval(() => {
-  const currentUrl = window.location.href;
-  if (currentUrl !== lastUrl) {
-    logMessage(`[Analytics] URL changed from ${lastUrl} to ${currentUrl}`);
+// Set up URL change detection.
+// Guard against stacking intervals across content-script re-injection
+// (extension reload, bfcache restore): only one tracker per page.
+const w = window as any;
+if (!w.__mcpUrlTrackerStarted) {
+  w.__mcpUrlTrackerStarted = true;
+  w.__mcpUrlTrackerId = setInterval(() => {
+    const currentUrl = window.location.href;
+    if (currentUrl !== lastUrl) {
+      logMessage(`[Analytics] URL changed from ${lastUrl} to ${currentUrl}`);
 
-    // Send URL change event with demographic data
-    try {
-      chrome.runtime.sendMessage({
-        command: 'trackAnalyticsEvent',
-        eventName: 'url_change',
-        eventParams: {
-          page_title: document.title,
-          page_location: currentUrl,
-          previous_page: lastUrl,
-          ...demographicData,
-        },
-      });
-      lastUrl = currentUrl;
-    } catch (error) {
-      logger.error(
-        '[ContentScript] Error sending URL change analytics:',
-        error instanceof Error ? error.message : String(error),
-      );
+      // Send URL change event with demographic data
+      try {
+        chrome.runtime.sendMessage({
+          command: 'trackAnalyticsEvent',
+          eventName: 'url_change',
+          eventParams: {
+            page_title: document.title,
+            page_location: currentUrl,
+            previous_page: lastUrl,
+            ...demographicData,
+          },
+        });
+        lastUrl = currentUrl;
+      } catch (error) {
+        logger.error(
+          '[ContentScript] Error sending URL change analytics:',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
-  }
-}, 1000); // Check every second
+  }, 1000); // Check every second
+}
 
 // Ask background script to track the event
 try {

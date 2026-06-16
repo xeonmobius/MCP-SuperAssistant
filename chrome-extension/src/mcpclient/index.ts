@@ -53,27 +53,40 @@ export type { AllEvents } from './types/events';
 
 // Singleton client instance for backward compatibility
 let globalClient: McpClient | null = null;
+// In-flight init promise so concurrent first callers don't each spin up a
+// (leaking) McpClient with its own heartbeat interval.
+let globalClientInitPromise: Promise<McpClient> | null = null;
 
 /**
  * Get or create the global MCP client instance
  */
 async function getGlobalClient(): Promise<McpClient> {
-  if (!globalClient) {
+  if (globalClient) return globalClient;
+  if (globalClientInitPromise) return globalClientInitPromise;
+
+  globalClientInitPromise = (async () => {
     try {
-      globalClient = new McpClient();
-      await globalClient.initialize();
-      
+      const client = new McpClient();
+      await client.initialize();
+
       // Set up global event listeners for connection status changes
-      setupGlobalClientEventListeners(globalClient);
+      setupGlobalClientEventListeners(client);
+      globalClient = client;
+      return client;
     } catch (error) {
       logger.error('[getGlobalClient] Failed to initialize client:', error);
       // Create a fallback client without plugin loading
-      globalClient = new McpClient();
+      const fallback = new McpClient();
       // Don't initialize to avoid plugin loading issues
-      setupGlobalClientEventListeners(globalClient);
+      setupGlobalClientEventListeners(fallback);
+      globalClient = fallback;
+      return fallback;
+    } finally {
+      globalClientInitPromise = null;
     }
-  }
-  return globalClient;
+  })();
+
+  return globalClientInitPromise;
 }
 
 /**
@@ -240,7 +253,19 @@ export function resetMcpConnectionState(): void {
 }
 
 export function resetMcpConnectionStateForRecovery(): void {
-  logger.debug('[Backward Compatibility] resetMcpConnectionStateForRecovery - handled by plugin health monitoring');
+  // Actually reset connection state. Previously this was a no-op (log only),
+  // so the recovery path in the background script did nothing and only a
+  // browser restart could recover a wedged connection.
+  logger.debug('[Backward Compatibility] resetMcpConnectionStateForRecovery: clearing client connection');
+  try {
+    if (globalClient) {
+      globalClient.disconnect().catch(error => {
+        logger.error('[Backward Compatibility] resetMcpConnectionStateForRecovery disconnect failed:', error);
+      });
+    }
+  } catch (error) {
+    logger.error('[Backward Compatibility] resetMcpConnectionStateForRecovery error:', error);
+  }
 }
 
 export function abortMcpConnection(): void {

@@ -201,13 +201,20 @@ export class McpClient extends EventEmitter<AllEvents> {
       // Add timeout to prevent hanging
       const connectionTimeout = 30000; // 30 seconds
       const connectionPromise = this.client.connect(transport);
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           reject(new Error(`MCP client connection timeout after ${connectionTimeout}ms`));
         }, connectionTimeout);
       });
 
-      await Promise.race([connectionPromise, timeoutPromise]);
+      try {
+        await Promise.race([connectionPromise, timeoutPromise]);
+      } finally {
+        // Clear the timer on settle so it doesn't linger firing a no-op reject
+        // 30s after a successful (or already-failed) connect.
+        if (timeoutId) clearTimeout(timeoutId);
+      }
       logger.debug(`MCP client connected successfully`);
 
       // Store connection state
@@ -418,6 +425,7 @@ export class McpClient extends EventEmitter<AllEvents> {
       };
 
       // Cache the response
+      const wasFirstDiscovery = this.primitivesCache === null;
       this.primitivesCache = response;
       this.primitivesCacheTime = Date.now();
 
@@ -427,9 +435,11 @@ export class McpClient extends EventEmitter<AllEvents> {
         type: this.activePlugin.metadata.transportType,
       });
 
-      // Update connection tracking with tools count (only if this is the first time discovering tools)
-      // This prevents duplicate connection events when tools are refreshed
-      if (this.primitivesCache === null || this.primitivesCache.tools.length === 0) {
+      // Update connection tracking with tools count (only on the FIRST successful
+      // discovery) so analytics doesn't fire a duplicate connection event on
+      // every tools refresh. The old check (`this.primitivesCache === null`)
+      // ran AFTER the assignment above, so it was always false.
+      if (wasFirstDiscovery) {
         analyticsService.trackConnectionChange({
           connection_status: 'connected',
           transport_type: this.activePlugin.metadata.transportType,

@@ -214,37 +214,36 @@ export class ChatGPTAdapter extends BaseAdapterPlugin {
       // Focus the input element
       targetElement.focus();
 
-      // For ProseMirror editor, we need to handle the content differently
-      // Remove placeholder if present
-      const placeholder = targetElement.querySelector('[data-placeholder]');
-      if (placeholder) {
-        placeholder.remove();
-      }
-
-      // Create a new paragraph element with the text
+      // ProseMirror (ChatGPT's composer) owns the DOM model. Reassigning
+      // innerHTML/textContent or appending raw <p> nodes desyncs it and leaves
+      // the submit button disabled. Insert via the editor-respecting path:
+      // focus, caret to end, then execCommand('insertText') with a fallback.
+      const toInsert = originalContent ? '\n' + text : text;
       const newContent = originalContent ? originalContent + '\n' + text : text;
-      
-      // Clear existing content and insert new content
-      targetElement.innerHTML = '';
-      const paragraph = document.createElement('p');
-      paragraph.textContent = newContent;
-      targetElement.appendChild(paragraph);
 
-      // Position cursor at the end of the inserted text
-      const range = document.createRange();
       const selection = window.getSelection();
-      if (selection && paragraph.firstChild) {
-        range.setStartAfter(paragraph.lastChild || paragraph);
-        range.collapse(true);
+      if (selection) {
         selection.removeAllRanges();
+        const range = document.createRange();
+        range.selectNodeContents(targetElement);
+        range.collapse(false); // caret at end
         selection.addRange(range);
       }
 
-      // Dispatch events to simulate user typing for better compatibility
-      targetElement.dispatchEvent(new Event('input', { bubbles: true }));
-      targetElement.dispatchEvent(new Event('change', { bubbles: true }));
-      targetElement.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-      targetElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      let inserted = false;
+      try {
+        inserted = document.execCommand('insertText', false, toInsert);
+      } catch {
+        inserted = false;
+      }
+      if (!inserted) {
+        // Fallback for editors that ignore execCommand (React-controlled).
+        targetElement.dispatchEvent(new InputEvent('input', {
+          inputType: 'insertText',
+          data: toInsert,
+          bubbles: true,
+        }));
+      }
 
       // Emit success event to the new event system
       this.emitExecutionCompleted('insertText', { text }, {

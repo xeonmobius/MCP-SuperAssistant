@@ -46,6 +46,12 @@ class ContextBridge {
   private isExtensionContextValid = true;
   private lastHealthCheck = 0;
   private readonly HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+  // Track chrome.* listeners + health interval so cleanup() can actually remove
+  // them. Previously they were added with .bind(this) inline and never removed,
+  // so every re-init (SPA navigation) stacked another listener + interval.
+  private chromeMessageHandler: ((m: any, s: chrome.runtime.MessageSender, r: (res?: any) => void) => boolean) | null = null;
+  private tabUpdatedHandler: ((tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => void) | null = null;
+  private healthCheckTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(config: ContextBridgeConfig = {}) {
     this.config = {
@@ -71,12 +77,14 @@ class ContextBridge {
         throw new Error('Chrome extension context is not available');
       }
 
-      // Set up Chrome runtime message listener
-      chrome.runtime.onMessage.addListener(this.handleChromeMessage.bind(this));
+      // Set up Chrome runtime message listener (store the bound ref so cleanup can remove it)
+      this.chromeMessageHandler = this.handleChromeMessage.bind(this);
+      chrome.runtime.onMessage.addListener(this.chromeMessageHandler);
 
       // Listen for tab updates and connection changes (only in background context)
       if (chrome.tabs && chrome.tabs.onUpdated) {
-        chrome.tabs.onUpdated.addListener(this.handleTabUpdated.bind(this));
+        this.tabUpdatedHandler = this.handleTabUpdated.bind(this);
+        chrome.tabs.onUpdated.addListener(this.tabUpdatedHandler);
       }
 
       // Set up event bus integration
@@ -184,8 +192,8 @@ class ContextBridge {
     // Perform initial health check
     performHealthCheck();
 
-    // Set up periodic health checks
-    setInterval(performHealthCheck, this.HEALTH_CHECK_INTERVAL);
+    // Set up periodic health checks (store handle so cleanup can clear it)
+    this.healthCheckTimer = setInterval(performHealthCheck, this.HEALTH_CHECK_INTERVAL);
   }
 
   /**
@@ -619,6 +627,21 @@ class ContextBridge {
 
     // Clear listeners
     this.messageListeners.clear();
+
+    // Remove chrome.* listeners and the health-check interval that were
+    // leaking across re-initializations.
+    if (this.chromeMessageHandler) {
+      try { chrome.runtime.onMessage.removeListener(this.chromeMessageHandler); } catch { /* noop */ }
+      this.chromeMessageHandler = null;
+    }
+    if (this.tabUpdatedHandler) {
+      try { chrome.tabs?.onUpdated?.removeListener?.(this.tabUpdatedHandler); } catch { /* noop */ }
+      this.tabUpdatedHandler = null;
+    }
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = null;
+    }
 
     this.initialized = false;
     logger.debug('[ContextBridge] Cleaned up');

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { eventBus } from '../events';
-import { getToolEnablementState, saveToolEnablementState } from '../utils/storage';
+import { getToolEnablementStateDetailed, saveToolEnablementState } from '../utils/storage';
 import type { Tool, DetectedTool, ToolExecution } from '../types/stores';
 import { createLogger } from '@extension/shared/lib/logger';
 
@@ -17,6 +17,11 @@ export interface ToolState {
   // New: Tool enablement state
   enabledTools: Set<string>; // Set of enabled tool names
   isLoadingEnablement: boolean; // Loading state for tool enablement
+  /**
+   * Bumped on every local enable/disable mutation; see skill.store for rationale
+   * (prevents an in-flight storage load from clobbering a fresh toggle).
+   */
+  loadGeneration: number;
   
   // Actions
   setAvailableTools: (tools: Tool[]) => void;
@@ -43,6 +48,7 @@ const initialState: Omit<ToolState, 'setAvailableTools' | 'addDetectedTool' | 'c
   lastExecutionId: null,
   enabledTools: new Set(), // Initially empty, will be populated when tools are set
   isLoadingEnablement: false, // Initially not loading
+  loadGeneration: 0,
 };
 
 export const useToolStore = create<ToolState>()(
@@ -141,10 +147,10 @@ export const useToolStore = create<ToolState>()(
         set(state => {
           const newEnabledTools = new Set([...state.enabledTools, toolName]);
           // Save to storage asynchronously
-          saveToolEnablementState(newEnabledTools).catch(error => 
+          saveToolEnablementState(newEnabledTools).catch(error =>
             logger.error('[ToolStore] Failed to save tool enablement state:', error)
           );
-          return { enabledTools: newEnabledTools };
+          return { enabledTools: newEnabledTools, loadGeneration: state.loadGeneration + 1 };
         });
         logger.debug(`Tool enabled: ${toolName}`);
       },
@@ -154,10 +160,10 @@ export const useToolStore = create<ToolState>()(
           const newEnabledTools = new Set(state.enabledTools);
           newEnabledTools.delete(toolName);
           // Save to storage asynchronously
-          saveToolEnablementState(newEnabledTools).catch(error => 
+          saveToolEnablementState(newEnabledTools).catch(error =>
             logger.error('[ToolStore] Failed to save tool enablement state:', error)
           );
-          return { enabledTools: newEnabledTools };
+          return { enabledTools: newEnabledTools, loadGeneration: state.loadGeneration + 1 };
         });
         logger.debug(`Tool disabled: ${toolName}`);
       },
@@ -166,21 +172,21 @@ export const useToolStore = create<ToolState>()(
         set(state => {
           const newEnabledTools = new Set(state.availableTools.map(tool => tool.name));
           // Save to storage asynchronously
-          saveToolEnablementState(newEnabledTools).catch(error => 
+          saveToolEnablementState(newEnabledTools).catch(error =>
             logger.error('[ToolStore] Failed to save tool enablement state:', error)
           );
-          return { enabledTools: newEnabledTools };
+          return { enabledTools: newEnabledTools, loadGeneration: state.loadGeneration + 1 };
         });
         logger.debug('[ToolStore] All tools enabled');
       },
 
       disableAllTools: () => {
         const newEnabledTools = new Set<string>();
-        set({ enabledTools: newEnabledTools });
         // Save to storage asynchronously
-        saveToolEnablementState(newEnabledTools).catch(error => 
+        saveToolEnablementState(newEnabledTools).catch(error =>
           logger.error('[ToolStore] Failed to save tool enablement state:', error)
         );
+        set(state => ({ enabledTools: newEnabledTools, loadGeneration: state.loadGeneration + 1 }));
         logger.debug('[ToolStore] All tools disabled');
       },
 
@@ -190,20 +196,34 @@ export const useToolStore = create<ToolState>()(
 
       loadToolEnablementState: async () => {
         set({ isLoadingEnablement: true });
+        const myGeneration = get().loadGeneration;
         try {
-          const storedEnabledTools = await getToolEnablementState();
+          const detailed = await getToolEnablementStateDetailed();
           const state = get();
-          
-          // If no stored state and we have available tools, enable all by default
-          if (storedEnabledTools.size === 0 && state.availableTools.length > 0) {
+
+          // A toggle happened during the read — do not clobber it.
+          if (state.loadGeneration !== myGeneration) {
+            set({ isLoadingEnablement: false });
+            return;
+          }
+
+          // Storage read failed: keep current state, do not default-on.
+          if (detailed.error) {
+            set({ isLoadingEnablement: false });
+            return;
+          }
+
+          // Never saved + we have tools -> enable all by default.
+          // Saved `[]` (explicitly disabled all) is preserved.
+          if (!detailed.hasSavedState && state.availableTools.length > 0) {
             const allToolsEnabled = new Set(state.availableTools.map(tool => tool.name));
             set({ enabledTools: allToolsEnabled, isLoadingEnablement: false });
             // Save the default state
             await saveToolEnablementState(allToolsEnabled);
             logger.debug('[ToolStore] No stored state found, enabled all tools by default');
           } else {
-            set({ enabledTools: storedEnabledTools, isLoadingEnablement: false });
-            logger.debug(`Tool enablement state loaded: ${storedEnabledTools.size} tools enabled`);
+            set({ enabledTools: detailed.set, isLoadingEnablement: false });
+            logger.debug(`Tool enablement state loaded: ${detailed.set.size} tools enabled`);
           }
         } catch (error) {
           logger.error('[ToolStore] Failed to load tool enablement state:', error);

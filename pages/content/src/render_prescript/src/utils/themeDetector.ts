@@ -1072,12 +1072,16 @@ export function startThemeMonitoring(): void {
       themeVariableWatcher.style.width = themeVariableWatcher.style.width === '1px' ? '2px' : '1px';
     };
 
-    setInterval(triggerObservation, 1000); // Check every second
+    // Store the interval handle so stopThemeMonitoring can clear it; previously
+    // the handle was discarded and the 1Hz toggle ticked forever (compounding
+    // across stop/start cycles).
+    const watcherInterval = setInterval(triggerObservation, 1000); // Check every second
     variableObserver.observe(themeVariableWatcher);
 
     (window as any)._themeVariableWatcher = {
       element: themeVariableWatcher,
       observer: variableObserver,
+      interval: watcherInterval,
     };
   }
 
@@ -1125,6 +1129,9 @@ export function stopThemeMonitoring(): void {
   const variableWatcher = (window as any)._themeVariableWatcher;
   if (variableWatcher) {
     variableWatcher.observer?.disconnect();
+    if (variableWatcher.interval) {
+      clearInterval(variableWatcher.interval);
+    }
     if (variableWatcher.element && variableWatcher.element.parentNode) {
       variableWatcher.element.parentNode.removeChild(variableWatcher.element);
     }

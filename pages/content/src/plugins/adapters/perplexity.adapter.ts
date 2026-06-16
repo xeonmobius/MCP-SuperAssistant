@@ -70,7 +70,6 @@ export class PerplexityAdapter extends BaseAdapterPlugin {
     super();
     PerplexityAdapter.instanceCount++;
     this.instanceId = PerplexityAdapter.instanceCount;
-    console.debug(`[PerplexityAdapter] Instance #${this.instanceId} created. Total instances: ${PerplexityAdapter.instanceCount}`);
   }
 
   async initialize(context: PluginContext): Promise<void> {

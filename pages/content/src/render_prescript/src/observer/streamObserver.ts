@@ -24,6 +24,18 @@ export const streamingObservers = new Map<string, MutationObserver>();
 export const streamingLastUpdated = new Map<string, number>(); // blockId -> timestamp
 export const updateQueue = new Map<string, HTMLElement>(); // Store target elements (pre, code, etc.)
 
+// Per-node periodic-checker intervals, keyed by blockId. Tracked so they can be
+// torn down by stopAllPeriodicCheckers() — without this each monitored block
+// left a 1Hz interval running for the lifetime of the page (the source <pre>
+// is hidden, not removed, so the "node left DOM" self-clear never fired).
+export const periodicCheckers = new Map<string, ReturnType<typeof setInterval>>();
+
+/** Clear every tracked periodic checker (called on stopDirectMonitoring). */
+export const stopAllPeriodicCheckers = (): void => {
+  periodicCheckers.forEach(id => clearInterval(id));
+  periodicCheckers.clear();
+};
+
 // A flag to indicate if updates are currently being processed
 const isProcessing = false;
 
@@ -95,7 +107,12 @@ const PATTERN_CACHE = {
   allFunctionPatterns: /(<function_calls>|<\/function_calls>|<invoke[^>]*>|<\/invoke>|<parameter[^>]*>|<\/parameter>)/g,
 };
 
-// Fast content analysis cache to avoid repeated parsing
+// Fast content analysis cache to avoid repeated parsing.
+// Bounded: the key is the full streaming content, so every token of every
+// response is a unique key. Without a cap this Map grew unbounded for the page
+// lifetime. We evict the oldest entries (Map preserves insertion order) once
+// over the limit.
+const MAX_CONTENT_ANALYSIS_CACHE = 200;
 const contentAnalysisCache = new Map<
   string,
   {
@@ -104,6 +121,15 @@ const contentAnalysisCache = new Map<
     timestamp: number;
   }
 >();
+
+function setContentAnalysisCache(content: string, result: { hasFunction: boolean; isComplete: boolean }): void {
+  if (contentAnalysisCache.size >= MAX_CONTENT_ANALYSIS_CACHE) {
+    // Evict the oldest entry (first insertion-ordered key).
+    const oldest = contentAnalysisCache.keys().next().value;
+    if (oldest !== undefined) contentAnalysisCache.delete(oldest);
+  }
+  contentAnalysisCache.set(content, { ...result, timestamp: Date.now() });
+}
 
 // Debounced rendering to prevent rapid-fire updates
 const renderingDebouncer = new Map<string, number>();
@@ -353,7 +379,7 @@ const analyzeFunctionContent = (
     };
 
     if (useCache) {
-      contentAnalysisCache.set(content, { ...result, timestamp: Date.now() });
+      setContentAnalysisCache(content, result);
     }
 
     return result;
@@ -377,7 +403,7 @@ const analyzeFunctionContent = (
   if (!hasFunction) {
     const result = { hasFunction: false, isComplete: false, functionCallPattern: false };
     if (useCache) {
-      contentAnalysisCache.set(content, { ...result, timestamp: Date.now() });
+      setContentAnalysisCache(content, result);
     }
     return result;
   }
@@ -403,7 +429,7 @@ const analyzeFunctionContent = (
   const result = { hasFunction, isComplete, functionCallPattern: hasFunction };
 
   if (useCache) {
-    contentAnalysisCache.set(content, { ...result, timestamp: Date.now() });
+    setContentAnalysisCache(content, result);
   }
 
   return result;
@@ -469,11 +495,16 @@ export const monitorNode = (node: HTMLElement, blockId: string): void => {
   let lastContentLength = node.textContent?.length || 0;
   let detectedIncompleteTags = false;
 
-  // Setup a periodic checker for this node that can detect abrupt endings
+  // Setup a periodic checker for this node that can detect abrupt endings.
+  // Replace any previous checker for this block so re-monitoring can't stack timers.
+  const previous = periodicCheckers.get(blockId);
+  if (previous) clearInterval(previous);
+
   const periodicChecker = setInterval(() => {
     // If node is no longer in the DOM, clean up
     if (!document.body.contains(node)) {
       clearInterval(periodicChecker);
+      periodicCheckers.delete(blockId);
       return;
     }
 
@@ -639,6 +670,9 @@ export const monitorNode = (node: HTMLElement, blockId: string): void => {
       }
     }
   });
+
+  // Track this checker so stopAllPeriodicCheckers() can clear it on teardown.
+  periodicCheckers.set(blockId, periodicChecker);
 
   // Configure the observer to watch the node and its descendants with optimized options
   observer.observe(node, {

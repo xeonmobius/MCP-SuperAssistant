@@ -192,27 +192,36 @@ export const clearToolPermission = (serverName: string, toolName: string, url: s
  * Returns a Set of enabled tool names
  */
 export const getToolEnablementState = async (): Promise<Set<string>> => {
+  const detailed = await getToolEnablementStateDetailed();
+  return detailed.set;
+};
+
+/**
+ * Detailed tool enablement read. See `getSkillEnablementStateDetailed` for the
+ * three-way distinction (never-saved / saved-[] / error).
+ */
+export const getToolEnablementStateDetailed = async (): Promise<EnablementState> => {
   try {
     if (!chrome.storage || !chrome.storage.local) {
       logMessage('[Storage] Chrome storage API not available');
-      return new Set();
+      return { set: new Set(), hasSavedState: false, error: true };
     }
 
     const result = await chrome.storage.local.get(TOOL_ENABLEMENT_KEY);
-    const enabledToolsArray = result && typeof result === 'object' ? (result[TOOL_ENABLEMENT_KEY] as string[]) : undefined;
+    const enabledToolsArray = result && typeof result === 'object' ? (result[TOOL_ENABLEMENT_KEY] as string[] | undefined) : undefined;
 
-    if (!enabledToolsArray || !Array.isArray(enabledToolsArray)) {
+    if (!Array.isArray(enabledToolsArray)) {
       logMessage('[Storage] No stored tool enablement state found, returning empty set');
-      return new Set();
+      return { set: new Set(), hasSavedState: false, error: false };
     }
 
     logMessage(`[Storage] Retrieved tool enablement state: ${enabledToolsArray.length} enabled tools`);
-    return new Set(enabledToolsArray);
+    return { set: new Set(enabledToolsArray), hasSavedState: true, error: false };
   } catch (error) {
     logMessage(
       `[Storage] Error retrieving tool enablement state: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return new Set();
+    return { set: new Set(), hasSavedState: false, error: true };
   }
 };
 
@@ -253,24 +262,42 @@ export const clearToolEnablementState = async (): Promise<void> => {
 };
 
 export const getSkillEnablementState = async (): Promise<Set<string>> => {
+  const detailed = await getSkillEnablementStateDetailed();
+  return detailed.set;
+};
+
+export interface EnablementState {
+  set: Set<string>;
+  /** true if a value (even `[]`) was explicitly persisted for this key */
+  hasSavedState: boolean;
+  /** true if storage is unavailable or the read threw (do NOT default-on) */
+  error: boolean;
+}
+
+/**
+ * Detailed skill enablement read. Distinguishes three cases the legacy
+ * `getSkillEnablementState` collapsed together:
+ *   - never saved  -> hasSavedState=false, error=false  (caller may default-on)
+ *   - saved `[]`   -> hasSavedState=true,  set empty    (user disabled ALL)
+ *   - read failed  -> error=true                        (keep current state)
+ */
+export const getSkillEnablementStateDetailed = async (): Promise<EnablementState> => {
   try {
     if (!chrome.storage || !chrome.storage.local) {
       logMessage('[Storage] Chrome storage API not available');
-      return new Set();
+      return { set: new Set(), hasSavedState: false, error: true };
     }
-
     const result = await chrome.storage.local.get(SKILL_ENABLEMENT_KEY);
-    const enabledArray = result && typeof result === 'object' ? (result[SKILL_ENABLEMENT_KEY] as string[]) : undefined;
+    const enabledArray = result && typeof result === 'object' ? (result[SKILL_ENABLEMENT_KEY] as string[] | undefined) : undefined;
 
-    if (!enabledArray || !Array.isArray(enabledArray)) {
-      return new Set();
+    if (!Array.isArray(enabledArray)) {
+      return { set: new Set(), hasSavedState: false, error: false };
     }
-
     logMessage(`[Storage] Retrieved skill enablement state: ${enabledArray.length} enabled skills`);
-    return new Set(enabledArray);
+    return { set: new Set(enabledArray), hasSavedState: true, error: false };
   } catch (error) {
     logMessage(`[Storage] Error retrieving skill enablement state: ${error instanceof Error ? error.message : String(error)}`);
-    return new Set();
+    return { set: new Set(), hasSavedState: false, error: true };
   }
 };
 

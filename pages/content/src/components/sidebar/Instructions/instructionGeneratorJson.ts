@@ -316,7 +316,7 @@ ClassName | Custom class | User
     instructions += '\n</custom_instructions>\n\n';
   }
 
-  instructions += '<\\system>';
+  instructions += '</system>';
 
   instructions += '\n\n';
   // Add reminder about JSON code blocks

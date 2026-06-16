@@ -214,16 +214,35 @@ export class GeminiAdapter extends BaseAdapterPlugin {
       // Focus the input element
       targetElement.focus();
 
-      // Insert the text by updating the content and dispatching appropriate events
-      // Append the text to the original value on a new line if there's existing content
+      // Gemini's composer is a contenteditable managed by a rich-text editor
+      // (rich-textareacustom / Quill-like). Reassigning textContent desyncs its
+      // internal model -> submit stays disabled / text vanishes. Insert via the
+      // editor-respecting path: focus, caret to end, execCommand('insertText').
+      const toInsert = originalValue ? '\n' + text : text;
       const newContent = originalValue ? originalValue + '\n' + text : text;
-      targetElement.textContent = newContent;
 
-      // Dispatch events to simulate user typing for better compatibility
-      targetElement.dispatchEvent(new Event('input', { bubbles: true }));
-      targetElement.dispatchEvent(new Event('change', { bubbles: true }));
-      targetElement.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-      targetElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        const range = document.createRange();
+        range.selectNodeContents(targetElement);
+        range.collapse(false); // caret at end
+        selection.addRange(range);
+      }
+
+      let inserted = false;
+      try {
+        inserted = document.execCommand('insertText', false, toInsert);
+      } catch {
+        inserted = false;
+      }
+      if (!inserted) {
+        targetElement.dispatchEvent(new InputEvent('input', {
+          inputType: 'insertText',
+          data: toInsert,
+          bubbles: true,
+        }));
+      }
 
       // Emit success event to the new event system
       this.emitExecutionCompleted('insertText', { text }, {
@@ -336,7 +355,9 @@ export class GeminiAdapter extends BaseAdapterPlugin {
       // Read file as DataURL and post primitives to page context
       const dataUrl = await this.readFileAsDataURL(file);
 
-      // Post message to page context for file drop simulation
+      // Post message to page context for file drop simulation.
+      // Target the current origin (not '*') so the base64 file payload isn't
+      // exposed to any other origin's listener on this page.
       window.postMessage(
         {
           type: 'MCP_DROP_FILE',
@@ -346,7 +367,7 @@ export class GeminiAdapter extends BaseAdapterPlugin {
           lastModified: file.lastModified,
           fileData: dataUrl,
         },
-        '*'
+        window.location.origin
       );
 
       // Check for file preview to confirm success

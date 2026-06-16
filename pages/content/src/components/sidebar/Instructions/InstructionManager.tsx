@@ -5,6 +5,7 @@ import { generateInstructionsJson } from './instructionGeneratorJson';
 import { useUserPreferences, useToolEnablement } from '../../../hooks';
 import { useToolStore } from '../../../stores/tool.store';
 import { useSkillStore } from '../../../stores/skill.store';
+import { buildEnabledSkillTools } from '../../../utils/toolList';
 import { Typography } from '../ui';
 import { cn } from '@src/lib/utils';
 import { logMessage } from '@src/utils/helpers';
@@ -110,6 +111,14 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
   const { preferences, updatePreferences } = useUserPreferences();
   const { enabledTools: enabledToolsSet, isToolEnabled } = useToolEnablement();
 
+  // Skills live in the SKILL store (not the tool store — skill_* pseudo-tools are
+  // split out of the tool store on intake). Subscribe reactively so the
+  // AVAILABLE SKILLS section of the instructions prompt reflects current
+  // enablement. Deriving skills from `tools.filter(skill_)` (the old approach)
+  // yielded an empty list and the model never learned the skills exist.
+  const skillAvailable = useSkillStore(s => s.availableSkills);
+  const skillEnabledSet = useSkillStore(s => s.enabledSkills);
+
   const [instructions, setInstructions] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
@@ -169,15 +178,10 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
 
   // Generate instructions with custom instructions - memoized to prevent excessive calls
   const generateCurrentInstructions = useCallback(() => {
-    // return generateInstructions(enabledTools, customInstructions, customInstructionsEnabled);
-
-    // if (adapter.name === 'OpenRouterAdapter') {
-    //   return generateInstructions(enabledTools, customInstructions, customInstructionsEnabled);
-    // }
-
-    const enabledSkillTools = enabledTools.filter(t => t.name.startsWith('skill_'));
+    // Skills come from the skill store (reactive), NOT the tool store.
+    const enabledSkillTools = buildEnabledSkillTools(skillAvailable, skillEnabledSet);
     return generateInstructionsJson(enabledTools, customInstructions, customInstructionsEnabled, enabledSkillTools);
-  }, [enabledTools, customInstructions, customInstructionsEnabled]);
+  }, [enabledTools, customInstructions, customInstructionsEnabled, skillAvailable, skillEnabledSet]);
 
   // Memoize the actual current instructions to prevent unnecessary re-calculations
   const currentInstructions = useMemo(() => {

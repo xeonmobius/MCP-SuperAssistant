@@ -82,44 +82,44 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
   const [renderKey, setRenderKey] = useState<number>(0); // Force re-render key
   const [isInitializing, setIsInitializing] = useState<boolean>(true); // Track initialization state
 
-  // Get communication methods with guaranteed safe fallbacks and error boundaries
+  // Get communication methods with guaranteed safe fallbacks and error boundaries.
+  // NOTE: the useEffect that records the error is TOP-LEVEL (below), not nested in
+  // the catch. A hook inside a conditional branch violates the Rules of Hooks and
+  // crashes React ("rendered more hooks than during the previous render") the
+  // first time the invalidation appears/disappears between renders.
   let communicationMethods;
+  let communicationInitError: string | null = null;
   try {
     communicationMethods = useMcpCommunication();
   } catch (error) {
     // Handle extension context invalidation gracefully
     if (error instanceof Error && error.message.includes('Extension context invalidated')) {
       logMessage('[Sidebar] Extension context invalidated during hook initialization');
-      // Don't set state during render - use useEffect instead
-      React.useEffect(() => {
-        setExtensionContextInvalid(true);
-        setInitializationError('Extension was reloaded. Please refresh the page to restore functionality.');
-      }, []);
-      
-      // Provide fallback methods
-      communicationMethods = {
-        availableTools: [],
-        sendMessage: async () => 'Extension context invalidated',
-        refreshTools: async () => [],
-        forceReconnect: async () => false,
-        serverStatus: 'disconnected' as const,
-        updateServerConfig: async () => false,
-        getServerConfig: async () => ({ uri: '' })
-      };
+      communicationInitError = 'Extension was reloaded. Please refresh the page to restore functionality.';
     } else {
       logMessage(`[Sidebar] Unexpected error in useMcpCommunication: ${error instanceof Error ? error.message : String(error)}`);
-      // Provide safe fallback methods for any other error
-      communicationMethods = {
-        availableTools: [],
-        sendMessage: async () => 'Communication error',
-        refreshTools: async () => [],
-        forceReconnect: async () => false,
-        serverStatus: 'disconnected' as const,
-        updateServerConfig: async () => false,
-        getServerConfig: async () => ({ uri: '' })
-      };
     }
+
+    // Provide fallback methods either way so the rest of the component renders
+    communicationMethods = {
+      availableTools: [],
+      sendMessage: async () => 'Extension context invalidated',
+      refreshTools: async () => [],
+      forceReconnect: async () => false,
+      serverStatus: 'disconnected' as const,
+      updateServerConfig: async () => false,
+      getServerConfig: async () => ({ uri: '' })
+    };
   }
+
+  // Top-level effect: surface a context invalidation caught during render.
+  // Runs in the same order on every render, keeping the hook count stable.
+  React.useEffect(() => {
+    if (communicationInitError) {
+      setExtensionContextInvalid(true);
+      setInitializationError(communicationInitError);
+    }
+  }, [communicationInitError]);
 
   // Always render immediately - use safe defaults for all communication methods
   const serverStatus = connectionStatus || communicationMethods?.serverStatus || 'disconnected';
@@ -793,7 +793,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
             )}
 
             {/* Status and Settings section */}
-            <div className="py-4 px-4 space-y-4 overflow-y-auto flex-shrink-0">
+            <div className="py-4 px-4 space-y-4 flex-shrink-0">
               <ServerStatus status={serverStatus} />
 
               {/* Settings */}

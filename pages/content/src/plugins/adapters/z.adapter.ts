@@ -71,7 +71,6 @@ export class ZAdapter extends BaseAdapterPlugin {
     super();
     ZAdapter.instanceCount++;
     this.instanceId = ZAdapter.instanceCount;
-    console.debug(`[ZAdapter] Instance #${this.instanceId} created. Total instances: ${ZAdapter.instanceCount}`);
   }
 
   async initialize(context: PluginContext): Promise<void> {

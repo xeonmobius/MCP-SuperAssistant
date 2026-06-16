@@ -8,6 +8,7 @@ import {
   updateQueue,
   streamingLastUpdated,
   startProgressiveUpdates,
+  stopAllPeriodicCheckers,
 } from './streamObserver';
 import type { StabilizedBlock } from '../core/types';
 import { streamingContentLengths } from '../parser/index';
@@ -334,6 +335,10 @@ export const stopDirectMonitoring = (): void => {
   // Disconnect all streaming observers
   streamingObservers.forEach(observer => observer.disconnect());
   streamingObservers.clear();
+
+  // Clear every per-node periodic checker so they don't keep ticking at 1Hz
+  // after teardown (each block's source node is hidden, not removed).
+  stopAllPeriodicCheckers();
 
   // Clear the streaming update timer
   if (updateThrottleTimer) {

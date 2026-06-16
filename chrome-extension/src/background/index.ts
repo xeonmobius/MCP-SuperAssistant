@@ -18,7 +18,7 @@ import {
 import { sendAnalyticsEvent, trackError, collectDemographicData } from '../../utils/analytics';
 import { analyticsService } from '../../utils/analytics-service';
 import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths } from '../skills/loader';
-import { skillToPseudoTool, type Skill } from '../skills/parser';
+import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser';
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 
 // Import message types for type safety
@@ -160,20 +160,6 @@ function updateConnectionStatus(status: boolean): void {
  */
 function getConnectionCount(): number {
   return connectionCount;
-}
-
-/**
- * Increment connection count
- */
-function incrementConnectionCount(): void {
-  connectionCount++;
-}
-
-/**
- * Decrement connection count
- */
-function decrementConnectionCount(): void {
-  connectionCount = Math.max(0, connectionCount - 1);
 }
 
 // Define server connection state
@@ -396,6 +382,11 @@ async function tryConnectToServer(uri: string, type: ConnectionType = connection
     } catch (fsError) {
       logger.debug('[Background] Filesystem skills loading skipped:', fsError instanceof Error ? fsError.message : String(fsError));
     }
+
+    // Skills are now persisted in the cache. Re-broadcast the tool list WITH
+    // skill pseudo-tools so the sidebar reflects them without a manual refresh.
+    // (The initial broadcast above only contained raw MCP tools.)
+    await broadcastToolsWithSkills(uri);
     
     connectionAttemptCount = 0; // Reset counter on success
   } catch (error: any) {
@@ -419,7 +410,7 @@ async function tryConnectToServer(uri: string, type: ConnectionType = connection
 
       setTimeout(() => {
         isConnecting = false; // Reset connecting flag
-        tryConnectToServer(uri).catch(() => {}); // Try again
+        tryConnectToServer(uri, type).catch(() => {}); // Try again (preserve transport type)
       }, delayMs);
     } else {
       logger.debug('Maximum connection attempts reached. Will try again during periodic check.');
@@ -427,15 +418,22 @@ async function tryConnectToServer(uri: string, type: ConnectionType = connection
       isConnecting = false;
     }
   } finally {
-    if (connectionAttemptCount >= MAX_CONNECTION_ATTEMPTS) {
-      isConnecting = false;
-    }
+    // MUST reset unconditionally. On the SUCCESS path connectionAttemptCount is
+    // reset to 0 above, so the old `>= MAX_CONNECTION_ATTEMPTS` guard was false
+    // and isConnecting stayed true forever — permanently disabling reconnects
+    // and the periodic check. This was the root cause of "never reconnects after
+    // the first successful connect."
+    isConnecting = false;
   }
 }
 
-// Set up a periodic connection check with enhanced recovery logic
+// Periodic connection check + recovery.
+// MV3 service workers are evicted after ~30s idle, so a plain setInterval does
+// NOT reliably fire — chrome.alarms wakes the SW and is the correct mechanism.
 const PERIODIC_CHECK_INTERVAL = 60000; // 1 minute
-setInterval(async () => {
+const PERIODIC_ALARM_NAME = 'mcp-periodic-check';
+
+async function runPeriodicCheck(): Promise<void> {
   if (isConnecting) {
     return; // Skip if already connecting
   }
@@ -449,17 +447,17 @@ setInterval(async () => {
   if (wasConnected !== isConnected) {
     logger.debug(`Connection status changed: ${wasConnected} -> ${isConnected}`);
     broadcastConnectionStatusToContentScripts(isConnected);
-    
+
     // If connected, also broadcast available tools
     if (isConnected) {
       try {
         logger.debug('[Background] Periodic check: Connection established, fetching and broadcasting tools...');
         const primitives = await getPrimitivesWithBackwardsCompatibility(getServerUrl(), true, connectionType);
         logger.debug(`Periodic check: Retrieved ${primitives.length} primitives`);
-        
+
         const tools = normalizeTools(primitives);
         logger.debug(`Periodic check: Broadcasting ${tools.length} normalized tools`);
-        
+
         broadcastToolsUpdateToContentScripts(tools);
       } catch (error) {
         logger.warn('[Background] Error broadcasting tools after status change:', error);
@@ -476,19 +474,38 @@ setInterval(async () => {
     connectionAttemptCount = 0; // Reset counter for periodic checks
     logger.debug('Periodic check: MCP server not connected, attempting to connect');
     const serverUrl = getServerUrl();
-    
+
     // Reset the client's failure state periodically to prevent permanent disconnection
     // This is critical to fix the issue where only browser restart would work
     try {
       logger.debug('[Background] Resetting MCP client connection state for periodic recovery attempt');
       resetMcpConnectionStateForRecovery(); // Use recovery reset instead of full reset
     } catch (error) {
-      logger.warn('[Background] Error resetting MCP connection state:', error);
+      logger.warn('[Background] Error resetting MCP client connection state:', error);
     }
-    
+
     tryConnectToServer(serverUrl, connectionType).catch(() => {});
   }
-}, PERIODIC_CHECK_INTERVAL);
+}
+
+// Prefer chrome.alarms (survives SW eviction); fall back to setInterval when the
+// alarms API isn't available (older Chrome / non-extension test contexts).
+if (typeof chrome !== 'undefined' && (chrome as any).alarms) {
+  (chrome as any).alarms.create(PERIODIC_ALARM_NAME, { periodInMinutes: PERIODIC_CHECK_INTERVAL / 60000 });
+  (chrome as any).alarms.onAlarm.addListener((alarm: { name: string }) => {
+    if (alarm.name === PERIODIC_ALARM_NAME) {
+      runPeriodicCheck().catch(error => {
+        logger.warn('[Background] Periodic alarm check failed:', error);
+      });
+    }
+  });
+} else {
+  setInterval(() => {
+    runPeriodicCheck().catch(error => {
+      logger.warn('[Background] Periodic check failed:', error);
+    });
+  }, PERIODIC_CHECK_INTERVAL);
+}
 
 // Log active connections periodically
 setInterval(() => {
@@ -761,7 +778,7 @@ async function handleMcpMessage(
               } else {
                 try {
                   const serverUrl = getServerUrl();
-                  const readResult = await callToolWithBackwardsCompatibility(serverUrl, 'read_text_file', { path: resolvedPath });
+                  const readResult = await callToolWithBackwardsCompatibility(serverUrl, 'filesystem.read_text_file', { path: resolvedPath });
                   const fileContent = extractTextFromCallResult(readResult);
                   if (fileContent) {
                     result = { content: [{ type: 'text', text: fileContent }] };
@@ -777,17 +794,20 @@ async function handleMcpMessage(
           }
         } else if (toolName.startsWith('skill_')) {
           logger.debug(`[Background] Intercepting skill tool call: ${toolName}`);
-          const skillName = toolName.replace(/^skill_/, '').replace(/_/g, '-');
           const skills = getCachedSkills();
-          const skill = skills.find(s => s.name === skillName);
+          // Match by the ENCODED tool name so underscored skill names (e.g.
+          // `foo_bar`) resolve correctly. The old `toolName.replace(/_/g,'-')`
+          // decode was lossy: `foo_bar` -> tool `skill_foo__bar` -> decoded
+          // `foo--bar` -> "Skill not found".
+          const skill = skills.find(s => `skill_${encodeSkillName(s.name)}` === toolName);
           if (skill) {
             result = {
               content: [{ type: 'text', text: skill.content }],
             };
-            logger.debug(`[Background] Returned skill content for: ${skillName} (${skill.content.length} chars)`);
+            logger.debug(`[Background] Returned skill content for: ${skill.name} (${skill.content.length} chars)`);
           } else {
             result = {
-              content: [{ type: 'text', text: `Skill "${skillName}" not found. Available skills: ${skills.map(s => s.name).join(', ')}` }],
+              content: [{ type: 'text', text: `Skill tool "${toolName}" not found. Available skills: ${skills.map(s => s.name).join(', ')}` }],
               isError: true,
             };
           }
@@ -1047,16 +1067,22 @@ async function handleMcpMessage(
           try {
             const endpointSkills = await loadSkillsFromEndpoint(uri);
             allSkills.push(...endpointSkills);
-          } catch {}
+          } catch (endpointErr) {
+            logger.debug('[Background] Endpoint skills reload skipped:', endpointErr instanceof Error ? endpointErr.message : String(endpointErr));
+          }
 
           try {
             const fsSkills = await loadSkillsFromFilesystemServer(uri, callToolWithBackwardsCompatibility);
             const existingNames = new Set(allSkills.map(s => s.name));
             allSkills.push(...fsSkills.filter(s => !existingNames.has(s.name)));
-          } catch {}
+          } catch (fsErr) {
+            logger.warn('[Background] Filesystem skills reload failed:', fsErr instanceof Error ? fsErr.message : String(fsErr));
+          }
 
           if (allSkills.length > 0) {
             await persistSkills(allSkills);
+            // Push the refreshed skill set to every open sidebar.
+            await broadcastToolsWithSkills(uri);
           }
 
           result = { count: allSkills.length, skills: allSkills.map(s => ({ name: s.name, description: s.description })) };
@@ -1166,6 +1192,32 @@ function broadcastToolsUpdateToContentScripts(tools: any[]) {
       }
     });
   });
+}
+
+/**
+ * Re-broadcast the current tool list, INCLUDING skill pseudo-tools, to every
+ * content script.
+ *
+ * Skills are loaded asynchronously AFTER the initial tool broadcast emitted on
+ * connect. Without this follow-up broadcast, the sidebar never learns that
+ * skills became available unless it happens to re-pull `mcp:get-tools` at the
+ * right moment — which is the root cause of the "skills sometimes load,
+ * sometimes don't" race. Calling this once skills are persisted guarantees the
+ * sidebar receives an authoritative tool+skill list regardless of timing.
+ */
+async function broadcastToolsWithSkills(serverUrl: string): Promise<void> {
+  try {
+    const primitives = await getPrimitivesWithBackwardsCompatibility(serverUrl, true, connectionType);
+    let tools = normalizeTools(primitives);
+    const skills = getCachedSkills();
+    if (skills.length > 0) {
+      tools = [...tools, ...skills.map(s => skillToPseudoTool(s))];
+    }
+    broadcastToolsUpdateToContentScripts(tools);
+    logger.debug(`[Background] Re-broadcast ${tools.length} tools (${skills.length} skills) after skill update`);
+  } catch (error) {
+    logger.warn('[Background] Failed to re-broadcast tools after skill update:', error);
+  }
 }
 
 /**

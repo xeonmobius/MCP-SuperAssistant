@@ -65,7 +65,6 @@ export class T3ChatAdapter extends BaseAdapterPlugin {
     super();
     T3ChatAdapter.instanceCount++;
     this.instanceId = T3ChatAdapter.instanceCount;
-    console.debug(`[T3ChatAdapter] Instance #${this.instanceId} created. Total instances: ${T3ChatAdapter.instanceCount}`);
   }
 
   async initialize(context: PluginContext): Promise<void> {

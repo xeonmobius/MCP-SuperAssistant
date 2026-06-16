@@ -781,7 +781,7 @@ const ServerStatus: React.FC<ServerStatusProps> = ({ status: initialStatus }) =>
 
       {/* Settings panel */}
       {showSettings && (
-        <div className="mt-3 animate-in slide-in-from-top-2 duration-200">
+        <div className="mt-3 animate-in slide-in-from-top-2 duration-200 max-h-[50vh] overflow-y-auto">
           <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
             <CardContent className="p-4 text-xs text-slate-700 dark:text-slate-300">
               <Typography variant="h4" className="mb-3 text-slate-800 dark:text-slate-100 font-semibold">

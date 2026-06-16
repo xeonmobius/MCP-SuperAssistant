@@ -163,6 +163,9 @@ export function useMultipleEventListeners(
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
+  // Spread `deps` as individual effect dependencies. Passing `[deps]` (an array
+  // literal) created a NEW reference every render and re-subscribed all listeners
+  // every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deps]); // Rerun if deps change, which includes the eventCallbacks map itself
+  }, deps);
 }
