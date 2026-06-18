@@ -1,10 +1,11 @@
 /* pages/content/src/styles/tokens.css */
 /* Sidebar redesign tokens — Direction B ("Arc / Friendly").
    Light is the default; dark applies under [data-theme="dark"] or .theme-dark
-   (both selectors are used by different parts of the host theme detector —
-   keep both until Sidebar theme application is confirmed later). */
+   (themeDetector applies both the .theme-${theme} class and data-theme attr).
+   :host targets the shadow host from inside the shadow-tree stylesheet
+   (:root would match nothing here — the stylesheet is injected into the shadowRoot). */
 
-:root,
+:host,
 .mcp-sidebar,
 [data-theme='light'],
 .theme-light {
