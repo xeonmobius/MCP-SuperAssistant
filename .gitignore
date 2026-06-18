@@ -20,6 +20,7 @@ tsconfig.tsbuildinfo
 # etc
 .DS_Store
 .idea
+.superpowers/
 **/.turbo
 **/.gitt
 # compiled
