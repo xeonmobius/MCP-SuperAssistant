@@ -32,6 +32,13 @@ describe('getConnectionState', () => {
     expect(s.expandError).toBe(false);
   });
 
+  it('expands the error detail when disconnected carries an error', () => {
+    const s = getConnectionState('disconnected', true);
+    expect(s.variant).toBe('off');
+    expect(s.label).toBe('Disconnected');
+    expect(s.expandError).toBe(true);
+  });
+
   it('maps error to the err variant and expands the error detail', () => {
     const s = getConnectionState('error', true);
     expect(s.variant).toBe('err');

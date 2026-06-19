@@ -24,7 +24,7 @@ export function getConnectionState(
       return { variant: 'err', label: 'Connection failed', showSpinner: false, expandError: true };
     case 'disconnected':
     default:
-      return { variant: 'off', label: 'Disconnected', showSpinner: false, expandError: false };
+      return { variant: 'off', label: 'Disconnected', showSpinner: false, expandError: hasError };
   }
 }
 

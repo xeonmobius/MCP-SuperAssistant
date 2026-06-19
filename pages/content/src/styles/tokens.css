@@ -31,7 +31,8 @@
 }
 
 [data-theme='dark'],
-.theme-dark {
+.theme-dark,
+:host.dark {
   --ground: #15141c;
   --surface: #1d1b26;
   --ink: #ece9f5;
