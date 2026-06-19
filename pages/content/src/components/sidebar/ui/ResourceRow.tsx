@@ -25,7 +25,7 @@ const ResourceRow: React.FC<ResourceRowProps> = ({
   const hasDetail = Boolean(description || renderDetail);
 
   return (
-    <div className={cn('rounded-row', !isEnabled && 'opacity-60')}>
+    <div className={cn('rounded-row transition-colors hover:bg-ground', !isEnabled && 'opacity-60')}>
       <div className="flex items-center gap-2 py-1.5">
         {hasDetail && (
           <button
@@ -49,7 +49,7 @@ const ResourceRow: React.FC<ResourceRowProps> = ({
         {!isEnabled && <span className="text-[10px] text-off">Disabled</span>}
       </div>
       {expanded && hasDetail && (
-        <div className="pb-2 pl-7 text-[11px] leading-snug text-muted">
+        <div className="sidebar-fade-in pb-2 pl-7 text-[11px] leading-snug text-muted">
           {description || 'No description available.'}
           {renderDetail?.()}
         </div>
