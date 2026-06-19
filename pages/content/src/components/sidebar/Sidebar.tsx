@@ -5,8 +5,7 @@ import { useUIStore } from '@src/stores/ui.store';
 import ConnectionBadge from './ServerStatus/ConnectionBadge';
 import AvailableTools from './AvailableTools/AvailableTools';
 import AvailableSkills from './AvailableSkills/AvailableSkills';
-import InstructionManager from './Instructions/InstructionManager';
-import InputArea from './InputArea/InputArea';
+import MoreDrawer from './MoreDrawer/MoreDrawer';
 import Settings from './Settings/Settings';
 import { useMcpCommunication } from '@src/hooks/useMcpCommunication';
 import { logMessage } from '@src/utils/helpers';
@@ -272,10 +271,9 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
   }, [sidebarVisible, isMinimized, isPushMode, sidebarWidth]);
 
   // Local UI state that doesn't need to be in the store
-  const [activeTab, setActiveTab] = useState<'availableTools' | 'availableSkills' | 'instructions' | 'settings'>('availableTools');
+  const [activeTab, setActiveTab] = useState<'availableTools' | 'availableSkills' | 'settings'>('availableTools');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isInputMinimized, setIsInputMinimized] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -511,8 +509,6 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
     toggleMinimize('user action');
   };
 
-  const toggleInputMinimize = () => setIsInputMinimized(prev => !prev);
-
   const handleResize = useCallback(
     (width: number) => {
       // Mark as resizing to prevent unnecessary updates
@@ -599,6 +595,12 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  const handleInputSubmit = async (text: string) => {
+    await adapter.insertTextIntoInput(text);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await adapter.triggerSubmission();
   };
 
   const handleThemeToggle = () => {
@@ -846,7 +848,6 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                 tabs={[
                   { id: 'availableTools', label: 'Tools' },
                   { id: 'availableSkills', label: 'Skills' },
-                  { id: 'instructions', label: 'Instructions' },
                   { id: 'settings', label: 'Settings' },
                 ]}
                 activeTab={activeTab}
@@ -879,19 +880,6 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                 <AvailableSkills />
               </div>
 
-              {/* Instructions */}
-              <div
-                className={cn(
-                  'h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent',
-                  { hidden: activeTab !== 'instructions' },
-                )}>
-                <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                  <CardContent className="p-0">
-                    <InstructionManager adapter={adapter} tools={formattedTools} />
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Settings */}
               <div
                 className={cn(
@@ -902,29 +890,8 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
               </div>
             </div>
 
-            {/* Input Area (Always at the bottom) */}
-            {/* <div className="border-t border-slate-200 dark:border-slate-700 flex-shrink-0 bg-white dark:bg-slate-800 shadow-inner">
-              {!isInputMinimized ? (
-                <div className="relative">
-                  <Button variant="ghost" size="sm" onClick={toggleInputMinimize} className="absolute top-2 right-2">
-                    <Icon name="chevron-down" size="sm" />
-                  </Button>
-                  <InputArea
-                    onSubmit={async text => {
-                      await adapter.insertTextIntoInput(text);
-                      await new Promise(resolve => setTimeout(resolve, 300));
-                      await adapter.triggerSubmission();
-                    }}
-                    onToggleMinimize={toggleInputMinimize}
-                  />
-                </div>
-              ) : (
-                <Button variant="default" size="sm" onClick={toggleInputMinimize} className="w-full h-10">
-                  <Icon name="chevron-up" size="sm" className="mr-2" />
-                  Show Input
-                </Button>
-              )}
-            </div> */}
+            {/* More Drawer (Always at the bottom) */}
+            <MoreDrawer onSubmitInput={handleInputSubmit} adapter={adapter} tools={formattedTools} />
           </div>
         </div>
       </div>
