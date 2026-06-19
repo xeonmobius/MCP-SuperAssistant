@@ -662,46 +662,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between flex-shrink-0 shadow-sm sidebar-header">
         {!isMinimized ? (
           <>
-            <div className="flex items-center space-x-2">
-              {/* Always show the header content immediately */}
-              <a
-                href="https://mcpsuperassistant.ai/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Visit MCP Super Assistant Website"
-                className="block">
-                {' '}
-                {/* Make link block for sizing */}
-                <img
-                  src={chrome.runtime.getURL('icon-34.png')}
-                  alt="MCP Logo"
-                  className="w-8 h-8 rounded-md " // Increase size & add rounded corners
-                />
-              </a>
-              <>
-                {/* Wrap title in link */}
-                <a
-                  href="https://mcpsuperassistant.ai/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-slate-800 dark:text-slate-100 hover:text-slate-600 dark:hover:text-slate-300 transition-colors duration-150 no-underline"
-                  aria-label="Visit MCP Super Assistant Website">
-                  <Typography variant="h4" className="font-semibold">
-                    MCP SuperAssistant
-                  </Typography>
-                </a>
-                {/* Existing icon link */}
-                <a
-                  href="https://mcpsuperassistant.ai/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors duration-150"
-                  aria-label="Visit MCP Super Assistant Website">
-                  <Icon name="arrow-up-right" size="xs" className="inline-block align-baseline" />
-                </a>
-              </>
-            </div>
-            <div className="flex items-center space-x-2 pr-1">
+            <div className="ml-auto flex items-center space-x-2 pr-1">
               {/* Theme Toggle Button */}
               <Button
                 variant="ghost"

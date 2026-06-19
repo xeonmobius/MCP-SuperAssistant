@@ -244,11 +244,9 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
     logMessage(`[AvailableTools] Group ${serverName} ${allEnabled ? 'disabled' : 'enabled'}`);
   };
 
-  // Calculate total tools count
-  const totalToolsCount = useMemo(() => {
-    const groupedCount = Object.values(groupedTools).reduce((acc, tools) => acc + tools.length, 0);
-    return groupedCount + ungroupedTools.length;
-  }, [groupedTools, ungroupedTools]);
+  // Total tools count = all available tools (unfiltered). The previous grouped
+  // calc read 0 when grouping was delayed, producing "40 of 0". Use the source.
+  const totalToolsCount = effectiveToolsCount;
 
   const isGroupEnabled = (tools: ExtendedTool[]) => {
     return tools.every(tool => isToolEnabled(tool.originalName || tool.name));
