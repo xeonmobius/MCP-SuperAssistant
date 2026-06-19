@@ -11,7 +11,7 @@ import Settings from './Settings/Settings';
 import { useMcpCommunication } from '@src/hooks/useMcpCommunication';
 import { logMessage } from '@src/utils/helpers';
 import { eventBus } from '@src/events/event-bus';
-import { Typography, Toggle, ToggleWithoutLabel, ResizeHandle, Icon, Button } from './ui';
+import { Typography, Toggle, ToggleWithoutLabel, ResizeHandle, Icon, Button, SidebarNav } from './ui';
 import { cn } from '@src/lib/utils';
 import { Card, CardContent } from '@src/components/ui/card';
 import type { UserPreferences } from '@src/types/stores';
@@ -272,7 +272,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
   }, [sidebarVisible, isMinimized, isPushMode, sidebarWidth]);
 
   // Local UI state that doesn't need to be in the store
-  const [activeTab, setActiveTab] = useState<'availableTools' | 'instructions' | 'settings'>('availableTools');
+  const [activeTab, setActiveTab] = useState<'availableTools' | 'availableSkills' | 'instructions' | 'settings'>('availableTools');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isInputMinimized, setIsInputMinimized] = useState(false);
@@ -842,40 +842,16 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
               </Card>
 
               {/* Tabs for Tools/Instructions */}
-              <div className="border-b border-slate-200 dark:border-slate-700 mb-2">
-                <div className="flex">
-                  <button
-                    className={cn(
-                      'py-2 px-4 font-medium text-sm transition-all duration-200',
-                      activeTab === 'availableTools'
-                        ? 'border-b-2 border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-t-lg',
-                    )}
-                    onClick={() => setActiveTab('availableTools')}>
-                    Available Tools
-                  </button>
-                  <button
-                    className={cn(
-                      'py-2 px-4 font-medium text-sm transition-all duration-200',
-                      activeTab === 'instructions'
-                        ? 'border-b-2 border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-t-lg',
-                    )}
-                    onClick={() => setActiveTab('instructions')}>
-                    Instructions
-                  </button>
-                  <button
-                    className={cn(
-                      'py-2 px-4 font-medium text-sm transition-all duration-200',
-                      activeTab === 'settings'
-                        ? 'border-b-2 border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-t-lg',
-                    )}
-                    onClick={() => setActiveTab('settings')}>
-                    Settings
-                  </button>
-                </div>
-              </div>
+              <SidebarNav
+                tabs={[
+                  { id: 'availableTools', label: 'Tools' },
+                  { id: 'availableSkills', label: 'Skills' },
+                  { id: 'instructions', label: 'Instructions' },
+                  { id: 'settings', label: 'Settings' },
+                ]}
+                activeTab={activeTab}
+                onChange={(id) => setActiveTab(id as typeof activeTab)}
+              />
             </div>
 
             {/* Tab Content Area - scrollable area with flex-grow to fill available space */}
@@ -886,22 +862,21 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                   'h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent',
                   { hidden: activeTab !== 'availableTools' },
                 )}>
-                <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                  <CardContent className="p-0">
-                    <AvailableTools
-                      tools={availableTools}
-                      onExecute={sendMessage}
-                      onRefresh={handleRefreshTools}
-                      isRefreshing={isRefreshing}
-                    />
-                  </CardContent>
-                </Card>
+                <AvailableTools
+                  tools={availableTools}
+                  onExecute={sendMessage}
+                  onRefresh={handleRefreshTools}
+                  isRefreshing={isRefreshing}
+                />
+              </div>
 
-                <Card className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 mt-3">
-                  <CardContent className="p-0">
-                    <AvailableSkills />
-                  </CardContent>
-                </Card>
+              {/* AvailableSkills */}
+              <div
+                className={cn(
+                  'h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent',
+                  { hidden: activeTab !== 'availableSkills' },
+                )}>
+                <AvailableSkills />
               </div>
 
               {/* Instructions */}
