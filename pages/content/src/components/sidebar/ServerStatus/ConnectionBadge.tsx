@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useConnectionStatus } from '@src/hooks';
 import { useMcpCommunication } from '@src/hooks/useMcpCommunication';
 import { getConnectionState, VARIANT_TAG_CLASS } from './connectionState';
@@ -8,6 +8,17 @@ const ConnectionBadge: React.FC = () => {
   const { status, isReconnecting, error, serverConfig, connectionAttempts, maxRetryAttempts } =
     useConnectionStatus();
   const { forceReconnect } = useMcpCommunication();
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleReconnect = useCallback(() => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    forceReconnect()
+      .catch(() => {
+        /* store status/error already surfaces the failure */
+      })
+      .finally(() => setIsRetrying(false));
+  }, [forceReconnect, isRetrying]);
 
   const state = getConnectionState(status, Boolean(error));
   const serverName = serverConfig?.uri || 'MCP server';
@@ -15,7 +26,7 @@ const ConnectionBadge: React.FC = () => {
 
   return (
     <div className="rounded-card bg-surface p-2.5 shadow-soft">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" aria-live="polite">
         <span
           aria-hidden
           className={[
@@ -42,8 +53,9 @@ const ConnectionBadge: React.FC = () => {
         {showRetryButton && (
           <button
             type="button"
-            onClick={forceReconnect}
-            className="rounded-pill bg-off-soft px-2 py-0.5 text-[10px] font-semibold text-ink"
+            onClick={handleReconnect}
+            disabled={isRetrying}
+            className="rounded-pill bg-off-soft px-2 py-0.5 text-[10px] font-semibold text-ink disabled:opacity-40"
           >
             Reconnect
           </button>
@@ -52,10 +64,10 @@ const ConnectionBadge: React.FC = () => {
 
       {state.expandError && error ? (
         <ConnectionError
-          message={String(error)}
+          message={error}
           attempts={connectionAttempts}
           maxAttempts={maxRetryAttempts}
-          onRetry={forceReconnect}
+          onRetry={handleReconnect}
         />
       ) : null}
     </div>

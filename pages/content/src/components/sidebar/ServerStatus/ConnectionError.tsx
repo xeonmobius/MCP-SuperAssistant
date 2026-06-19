@@ -14,7 +14,11 @@ const ConnectionError: React.FC<ConnectionErrorProps> = ({ message, attempts, ma
       <code className="block break-all text-[10px] leading-snug text-err font-mono">{message}</code>
       <div className="mt-2 flex items-center gap-2">
         <span className="text-[10px] text-muted">
-          {exhausted ? `Max retries (${maxAttempts}) reached` : `Attempt ${attempts}/${maxAttempts}`}
+          {maxAttempts === 0
+            ? 'Retry (unlimited)'
+            : exhausted
+              ? `Max retries (${maxAttempts}) reached`
+              : `Attempt ${attempts}/${maxAttempts}`}
         </span>
         <button
           type="button"
