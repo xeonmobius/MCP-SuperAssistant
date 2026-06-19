@@ -646,7 +646,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
     <div
       ref={sidebarRef}
       className={cn(
-        'fixed top-0 right-0 h-screen bg-white dark:bg-slate-900 shadow-lg z-50 flex flex-col border-l border-slate-200 dark:border-slate-700 sidebar',
+        'fixed top-0 right-0 h-screen bg-surface shadow-lg z-50 flex flex-col border-l border-line sidebar',
         isPushMode ? 'push-mode' : '',
         isResizingRef.current ? 'resizing' : '',
         isMinimized ? 'collapsed' : '',
@@ -664,7 +664,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
       )}
 
       {/* Header - Adjust content based on isMinimized */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between flex-shrink-0 shadow-sm sidebar-header">
+      <div className="bg-surface border-b border-line p-4 flex items-center justify-between flex-shrink-0 shadow-sm sidebar-header">
         {!isMinimized ? (
           <>
             <div className="ml-auto flex items-center space-x-2 pr-1">
@@ -674,7 +674,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                 size="icon"
                 onClick={handleThemeToggle}
                 aria-label={`Toggle theme (current: ${theme})`}
-                className="hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all duration-200 hover:scale-105">
+                className="hover:bg-ground rounded-full transition-all duration-200 hover:scale-105">
                 <Icon
                   name={getCurrentThemeIcon()}
                   size="sm"
@@ -688,8 +688,8 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                 size="icon"
                 onClick={handleToggleMinimize}
                 aria-label="Minimize sidebar"
-                className="hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all duration-200 hover:scale-105">
-                <Icon name="chevron-right" className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                className="hover:bg-ground rounded-full transition-all duration-200 hover:scale-105">
+                <Icon name="chevron-right" className="h-4 w-4 text-muted" />
               </Button>
             </div>
           </>
@@ -700,14 +700,14 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
             size="icon"
             onClick={handleToggleMinimize}
             aria-label="Expand sidebar"
-            className="mx-auto hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all duration-200 hover:scale-110">
-            <Icon name="chevron-left" className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+            className="mx-auto hover:bg-ground rounded-full transition-all duration-200 hover:scale-110">
+            <Icon name="chevron-left" className="h-4 w-4 text-muted" />
           </Button>
         )}
       </div>
 
       {/* Main Content Area - Using sliding panel approach */}
-      <div className="sidebar-inner-content flex-1 relative overflow-hidden bg-white dark:bg-slate-900">
+      <div className="sidebar-inner-content flex-1 relative overflow-hidden bg-surface">
         {/* Virtual slide - content always at full width */}
         <div
           ref={contentRef}
@@ -765,10 +765,10 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
               <ConnectionBadge />
 
               {/* Settings */}
-              <Card className="sidebar-card border-slate-200 dark:border-slate-700 dark:bg-slate-800 flex-shrink-0 overflow-hidden rounded-lg shadow-sm transition-shadow duration-300">
+              <Card className="sidebar-card border-line bg-surface flex-shrink-0 overflow-hidden rounded-lg shadow-sm transition-shadow duration-300">
                 <CardContent className="p-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Typography variant="subtitle" className="text-slate-700 dark:text-slate-300 font-medium">
+                    <Typography variant="subtitle" className="text-muted font-medium">
                       Push Content Mode
                     </Typography>
                     <ToggleWithoutLabel
@@ -793,7 +793,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full mt-2 border-slate-200 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
+                      className="w-full mt-2 border-line text-off hover:bg-ground"
                       onClick={() => {
                         const shadowHost = (window as any).activeSidebarManager?.getShadowHost();
                         if (shadowHost && shadowHost.shadowRoot) {
@@ -809,7 +809,6 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                 </CardContent>
               </Card>
 
-              {/* Tabs for Tools/Instructions */}
               <SidebarNav
                 tabs={[
                   { id: 'availableTools', label: 'Tools' },
