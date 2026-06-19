@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useCurrentAdapter } from '@src/hooks/useAdapter';
 import { useTheme, useSidebarState, useUserPreferences, useConnectionStatus } from '@src/hooks';
 import { useUIStore } from '@src/stores/ui.store';
-import ServerStatus from './ServerStatus/ServerStatus';
+import ConnectionBadge from './ServerStatus/ConnectionBadge';
 import AvailableTools from './AvailableTools/AvailableTools';
 import AvailableSkills from './AvailableSkills/AvailableSkills';
 import InstructionManager from './Instructions/InstructionManager';
@@ -794,7 +794,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
 
             {/* Status and Settings section */}
             <div className="py-4 px-4 space-y-4 flex-shrink-0">
-              <ServerStatus status={serverStatus} />
+              <ConnectionBadge />
 
               {/* Settings */}
               <Card className="sidebar-card border-slate-200 dark:border-slate-700 dark:bg-slate-800 flex-shrink-0 overflow-hidden rounded-lg shadow-sm transition-shadow duration-300">
