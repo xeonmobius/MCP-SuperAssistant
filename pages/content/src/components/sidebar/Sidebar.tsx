@@ -584,6 +584,9 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
   const handleRefreshTools = async () => {
     logMessage('[Sidebar] Refreshing tools');
     setIsRefreshing(true);
+    // ponytail: minimum 500ms display so the spinner doesn't flash (<1s) on
+    // fast resolves/failures — stops the layout from snapping refresh -> empty.
+    const minUntil = Date.now() + 500;
     try {
       await refreshTools(true);
       logMessage('[Sidebar] Tools refreshed successfully');
@@ -593,6 +596,8 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
       );
       // Don't show error to user - this is a background operation
     } finally {
+      const remaining = minUntil - Date.now();
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       setIsRefreshing(false);
     }
   };

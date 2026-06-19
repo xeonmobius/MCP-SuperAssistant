@@ -62,12 +62,13 @@ const ConnectionBadge: React.FC = () => {
         )}
       </div>
 
-      {state.expandError && error ? (
+      {(state.expandError || isRetrying) && error ? (
         <ConnectionError
           message={error}
           attempts={connectionAttempts}
           maxAttempts={maxRetryAttempts}
           onRetry={handleReconnect}
+          isRetrying={isRetrying}
         />
       ) : null}
     </div>
