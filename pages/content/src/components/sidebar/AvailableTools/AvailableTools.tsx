@@ -40,7 +40,7 @@ interface AvailableToolsProps {
   isRefreshing: boolean;
 }
 
-const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRefresh, isRefreshing }) => {
+const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRefreshing }) => {
   // Use Zustand hooks for tool management
   const { tools: storeTools } = useAvailableTools();
   const { enabledTools, enableTool, disableTool, enableAllTools, disableAllTools, isToolEnabled, loadToolEnablementState, isLoadingEnablement } = useToolEnablement();
@@ -162,11 +162,6 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
 
     return { groupedTools: grouped, ungroupedTools: ungrouped };
   }, [effectiveTools, searchTerm, enabledTools, hasUnsavedChanges]);
-
-  const handleExecute = (tool: Tool) => {
-    logMessage(`[AvailableTools] Executing tool: ${tool.name}`);
-    onExecute(tool);
-  };
 
   const handleRefresh = () => {
     logMessage('[AvailableTools] Refreshing available tools');
@@ -423,20 +418,20 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                 const groupExpanded = expandedTools.has(serverName);
                 
                 return (
-                  <div key={serverName} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                  <div key={serverName} className="border border-line rounded-lg overflow-hidden">
                     {/* Group Header */}
-                    <div className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-3">
+                    <div className="bg-ground border-b border-line p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <button
                             onClick={() => toggleToolExpansion(serverName)}
-                            className="p-1 mr-2 rounded transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                            className="p-1 mr-2 rounded transition-colors hover:bg-off-soft"
                             aria-label={groupExpanded ? 'Collapse group' : 'Expand group'}>
                             <Icon
                               name="chevron-right"
                               size="sm"
                               className={cn(
-                                'text-slate-600 dark:text-slate-400 transition-transform',
+                                'text-muted transition-transform',
                                 groupExpanded ? 'rotate-90' : ''
                               )}
                             />
@@ -448,23 +443,23 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                               if (el) el.indeterminate = groupPartiallyEnabled;
                             }}
                             onChange={() => handleToggleGroup(serverName, tools)}
-                            className="w-4 h-4 mr-3 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"
+                            className="w-4 h-4 mr-3 text-blue-600 bg-surface border-line rounded focus:ring-blue-500 focus:ring-2"
                           />
-                          <Typography variant="subtitle" className="text-slate-800 dark:text-slate-200 font-semibold">
+                          <Typography variant="subtitle" className="text-ink font-semibold">
                             {serverName}
                           </Typography>
-                          <Typography variant="small" className="ml-2 text-slate-500 dark:text-slate-400">
+                          <Typography variant="small" className="ml-2 text-muted">
                             ({tools.length} tools)
                           </Typography>
                         </div>
                         <div className="flex items-center gap-2">
                           {groupPartiallyEnabled && (
-                            <span className="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded">
+                            <span className="px-2 py-1 text-xs bg-con-soft text-con rounded">
                               Partial
                             </span>
                           )}
                           {!groupEnabled && !groupPartiallyEnabled && (
-                            <span className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
+                            <span className="px-2 py-1 text-xs bg-off-soft text-off rounded">
                               Disabled
                             </span>
                           )}
@@ -474,7 +469,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
 
                     {/* Group Tools */}
                     {groupExpanded && (
-                      <div className="bg-white dark:bg-slate-900 p-2 divide-y divide-line">
+                      <div className="bg-surface p-2 divide-y divide-line">
                         {tools.map(tool => {
                           const toolName = tool.originalName || tool.name;
                           
@@ -502,16 +497,16 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
 
               {/* Render ungrouped tools */}
               {ungroupedTools.length > 0 && (
-                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                  <div className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-3">
-                    <Typography variant="body" className="text-slate-800 dark:text-slate-200 font-semibold">
+                <div className="border border-line rounded-lg overflow-hidden">
+                  <div className="bg-ground border-b border-line p-3">
+                    <Typography variant="body" className="text-ink font-semibold">
                       Individual Tools
                     </Typography>
-                    <Typography variant="small" className="text-slate-500 dark:text-slate-400">
+                    <Typography variant="small" className="text-muted">
                       ({ungroupedTools.length} tools)
                     </Typography>
                   </div>
-                  <div className="bg-white dark:bg-slate-900 p-2 divide-y divide-line">
+                  <div className="bg-surface p-2 divide-y divide-line">
                     {ungroupedTools.map(tool => (
                       <ResourceRow
                         key={tool.name}
