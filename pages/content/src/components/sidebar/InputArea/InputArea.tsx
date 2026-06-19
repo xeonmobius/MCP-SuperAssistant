@@ -1,9 +1,8 @@
 import type React from 'react';
 import type { KeyboardEvent } from 'react';
 import { useState } from 'react';
-import { Typography, Icon, Button } from '../ui';
+import { Icon, Button } from '../ui';
 import { cn } from '@src/lib/utils';
-import { Card, CardHeader, CardContent } from '@src/components/ui/card';
 import { createLogger } from '@extension/shared/lib/logger';
 
 
@@ -11,10 +10,9 @@ const logger = createLogger('InputArea');
 
 interface InputAreaProps {
   onSubmit: (text: string) => void;
-  onToggleMinimize: () => void;
 }
 
-const InputArea: React.FC<InputAreaProps> = ({ onSubmit, onToggleMinimize }) => {
+const InputArea: React.FC<InputAreaProps> = ({ onSubmit }) => {
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,18 +49,8 @@ const InputArea: React.FC<InputAreaProps> = ({ onSubmit, onToggleMinimize }) => 
   };
 
   return (
-    <Card className="mt-3 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between">
-        <Typography variant="h4" className="flex items-center">
-          <Icon name="menu" size="sm" className="mr-1.5 text-slate-700 dark:text-slate-300" />
-          Input Area
-        </Typography>
-        {/* <Button variant="ghost" size="sm" onClick={onToggleMinimize}>
-          <Icon name="chevron-down" size="sm" />
-        </Button> */}
-      </CardHeader>
-      <CardContent className="p-3 bg-white dark:bg-slate-900">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+    <div className="rounded-card border border-line bg-surface shadow-soft p-3">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <div className="relative">
             <textarea
               value={inputText}
@@ -91,8 +79,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSubmit, onToggleMinimize }) => 
             )}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 };
 
