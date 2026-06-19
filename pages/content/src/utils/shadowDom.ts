@@ -194,6 +194,26 @@ function generateDarkThemeVariables(): string {
       --hover-bg: #334155;
       --hover-bg-light: #3f4f6e;
       --shadow-color: rgba(0, 0, 0, 0.3);
+      /* Sidebar redesign design tokens — Direction B (dark) */
+      --ground: #15141c;
+      --surface: #1d1b26;
+      --ink: #ece9f5;
+      --muted: #9a93ad;
+      --line: rgba(220, 210, 255, 0.1);
+      --accent-from: #a78bfa;
+      --accent-to: #f0abfc;
+      --ok: #34d399;
+      --ok-soft: rgba(52, 211, 153, 0.15);
+      --con: #fbbf24;
+      --con-soft: rgba(251, 191, 36, 0.15);
+      --off: #9a93ad;
+      --off-soft: rgba(154, 147, 173, 0.15);
+      --err: #f87171;
+      --err-soft: rgba(248, 113, 113, 0.15);
+      --radius-row: 8px;
+      --radius-card: 12px;
+      --radius-pill: 9999px;
+      --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
     
     /* Force common dark mode styles */
@@ -260,6 +280,14 @@ function generateDarkThemeVariables(): string {
       background-color: var(--bg-secondary) !important;
       border-color: var(--border-primary) !important;
     }
+
+    /* ponytail: respect prefers-reduced-motion across the whole shadow tree */
+    @media (prefers-reduced-motion: reduce) {
+      :host * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
     
   `;
 }
@@ -281,6 +309,26 @@ function generateLightThemeVariables(): string {
       --border-secondary: #cbd5e1;
       --hover-bg: #e2e8f0;
       --shadow-color: rgba(0, 0, 0, 0.1);
+      /* Sidebar redesign design tokens — Direction B (light) */
+      --ground: #f6f5f9;
+      --surface: #ffffff;
+      --ink: #1f1d2b;
+      --muted: #6b6480;
+      --line: rgba(80, 60, 140, 0.08);
+      --accent-from: #a78bfa;
+      --accent-to: #f0abfc;
+      --ok: #10b981;
+      --ok-soft: #ecfdf5;
+      --con: #d97706;
+      --con-soft: #fef3c7;
+      --off: #6b6480;
+      --off-soft: #f1f0f4;
+      --err: #b91c1c;
+      --err-soft: #fee2e2;
+      --radius-row: 8px;
+      --radius-card: 12px;
+      --radius-pill: 9999px;
+      --shadow-soft: 0 1px 3px rgba(80, 60, 140, 0.08);
     }
     
     /* Force common light mode styles */
@@ -341,6 +389,14 @@ function generateLightThemeVariables(): string {
     :host(.light) .input-area {
       background-color: var(--bg-primary) !important;
       border-color: var(--border-secondary) !important;
+    }
+
+    /* ponytail: respect prefers-reduced-motion across the whole shadow tree */
+    @media (prefers-reduced-motion: reduce) {
+      :host * {
+        transition: none !important;
+        animation: none !important;
+      }
     }
   `;
 }
