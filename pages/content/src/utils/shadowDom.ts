@@ -288,7 +288,23 @@ function generateDarkThemeVariables(): string {
         animation: none !important;
       }
     }
-    
+
+    /* Sidebar redesign motion — enter animations (theme-agnostic).
+       Reduced-motion guard above suppresses these automatically. */
+    @keyframes sidebar-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes sidebar-slide-up {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    :host .sidebar-fade-in {
+      animation: sidebar-fade-in 180ms ease-out;
+    }
+    :host .sidebar-slide-up {
+      animation: sidebar-slide-up 180ms ease-out;
+    }
   `;
 }
 
@@ -397,6 +413,23 @@ function generateLightThemeVariables(): string {
         transition: none !important;
         animation: none !important;
       }
+    }
+
+    /* Sidebar redesign motion — enter animations (theme-agnostic).
+       Reduced-motion guard above suppresses these automatically. */
+    @keyframes sidebar-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes sidebar-slide-up {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    :host .sidebar-fade-in {
+      animation: sidebar-fade-in 180ms ease-out;
+    }
+    :host .sidebar-slide-up {
+      animation: sidebar-slide-up 180ms ease-out;
     }
   `;
 }
