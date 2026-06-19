@@ -26,7 +26,7 @@ const ConnectionBadge: React.FC = () => {
 
   return (
     <div className="rounded-card bg-surface p-2.5 shadow-soft transition-shadow duration-150 hover:shadow-md">
-      <div key={state.variant} className="flex items-center gap-2 sidebar-fade-in" aria-live="polite">
+      <div className="flex items-center gap-2 sidebar-fade-in" aria-live="polite">
         <span
           aria-hidden
           className={[
