@@ -57,7 +57,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSubmit }) => {
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Enter your text here... (Press Enter to submit, Shift+Enter for new line)"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md min-h-[100px] resize-y focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 dark:bg-slate-800 dark:text-slate-200 bg-white text-slate-900"
+              className="w-full px-3 py-2 text-sm border border-line rounded-md min-h-[100px] resize-y focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 bg-ground text-ink placeholder:text-muted"
               disabled={isSubmitting}
             />
           </div>
