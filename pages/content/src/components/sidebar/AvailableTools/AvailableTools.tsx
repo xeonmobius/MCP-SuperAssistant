@@ -1,11 +1,10 @@
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import type { Tool } from '@src/types/mcp';
-import { useAvailableTools, useToolExecution, useToolEnablement } from '../../../hooks';
+import { useAvailableTools, useToolEnablement } from '../../../hooks';
 import { logMessage } from '@src/utils/helpers';
-import { Typography, Icon, Button } from '../ui';
+import { Typography, Icon, Button, ResourceRow } from '../ui';
 import { cn } from '@src/lib/utils';
-import { Card, CardHeader, CardContent } from '@src/components/ui/card';
 import { createLogger } from '@extension/shared/lib/logger';
 
 
@@ -16,6 +15,23 @@ interface ExtendedTool extends Tool {
   originalName?: string;
 }
 
+// ponytail: defensive schema stringifier — preserves the original try/parse/catch
+// behavior (JSON.parse for string schemas, "No schema available" / "Invalid schema
+// format" fallbacks, logger.error on failure). tool.schema is typed string on the
+// mcp type; tool.input_schema is the any-typed store shape. Read both defensively.
+const renderToolSchema = (tool: ExtendedTool): string => {
+  try {
+    const schema = (tool as any).schema || (tool as any).input_schema;
+    if (!schema) return 'No schema available';
+
+    const schemaObject = typeof schema === 'string' ? JSON.parse(schema) : schema;
+    return JSON.stringify(schemaObject, null, 2);
+  } catch (error) {
+    logger.error('Error processing tool schema:', error);
+    const schema = (tool as any).schema || (tool as any).input_schema;
+    return typeof schema === 'string' ? schema : 'Invalid schema format';
+  }
+};
 
 interface AvailableToolsProps {
   tools: Tool[];
@@ -27,7 +43,6 @@ interface AvailableToolsProps {
 const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRefresh, isRefreshing }) => {
   // Use Zustand hooks for tool management
   const { tools: storeTools } = useAvailableTools();
-  const { executions, isExecuting } = useToolExecution();
   const { enabledTools, enableTool, disableTool, enableAllTools, disableAllTools, isToolEnabled, loadToolEnablementState, isLoadingEnablement } = useToolEnablement();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -245,21 +260,21 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
   };
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <CardHeader className="p-4 pb-2 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+    <div className="rounded-card border border-line bg-surface shadow-soft">
+      <div className="p-4 pb-2 border-b border-line">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
               onClick={toggleComponentExpansion}
-              className="p-1 mr-2 rounded transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+              className="p-1 mr-2 rounded transition-colors bg-ground hover:bg-off-soft"
               aria-label={isExpanded ? 'Collapse tools' : 'Expand tools'}>
               <Icon
                 name="chevron-right"
                 size="sm"
-                className={cn('text-slate-600 dark:text-slate-300 transition-transform', isExpanded ? 'rotate-90' : '')}
+                className={cn('text-muted transition-transform', isExpanded ? 'rotate-90' : '')}
               />
             </button>
-            <Typography variant="h3">Available Tools</Typography>
+            <Typography variant="h3" className="text-ink">Available Tools</Typography>
           </div>
           <Button
             onClick={handleRefresh}
@@ -267,22 +282,22 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
             size="sm"
             variant="outline"
             className={cn(
-              'h-9 w-9 p-0',
-              isRefreshing ? 'opacity-50' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600',
+              'h-9 w-9 p-0 border-line bg-ground hover:bg-off-soft',
+              isRefreshing && 'opacity-50',
             )}
             aria-label="Refresh tools">
             <Icon
               name="refresh"
               size="sm"
-              className={cn('text-slate-700 dark:text-slate-300', isRefreshing ? 'animate-spin' : '')}
+              className={cn('text-muted', isRefreshing ? 'animate-spin' : '')}
             />
           </Button>
         </div>
         
         {isExpanded && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-line">
             <div className="flex items-center gap-2">
-              <Typography variant="small" className="text-slate-600 dark:text-slate-400">
+              <Typography variant="small" className="text-muted">
                 {enabledTools.size} of {totalToolsCount} tools enabled
               </Typography>
             </div>
@@ -292,7 +307,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                 size="sm"
                 variant="outline"
                 disabled={isRefreshing || isLoadingEnablement || totalToolsCount === 0}
-                className="h-8 px-3 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                className="h-8 px-3 text-xs border-line bg-ok-soft hover:bg-ok-soft text-ok">
                 Enable All
               </Button>
               <Button
@@ -300,7 +315,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                 size="sm"
                 variant="outline"
                 disabled={isRefreshing || isLoadingEnablement || totalToolsCount === 0}
-                className="h-8 px-3 text-xs bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
+                className="h-8 px-3 text-xs border-line bg-err-soft hover:bg-err-soft text-err">
                 Disable All
               </Button>
               {hasUnsavedChanges && (
@@ -309,14 +324,14 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                     onClick={handleSaveChanges}
                     size="sm"
                     variant="outline"
-                    className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                    className="h-8 px-3 text-xs border-ink bg-ink text-surface hover:bg-ink">
                     Save Changes
                   </Button>
                   <Button
                     onClick={handleDiscardChanges}
                     size="sm"
                     variant="outline"
-                    className="h-8 px-3 text-xs bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800">
+                    className="h-8 px-3 text-xs border-line bg-off-soft hover:bg-off-soft text-off">
                     Discard
                   </Button>
                 </>
@@ -324,10 +339,10 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
             </div>
           </div>
         )}
-      </CardHeader>
+      </div>
 
       {isExpanded && (
-        <CardContent className="p-4 pt-4 bg-white dark:bg-slate-900">
+        <div className="p-4 pt-4">
           <div className="mb-4">
             <div className="relative">
               <input
@@ -335,16 +350,16 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                 placeholder="Search tools..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="w-full px-3 py-2 pl-10 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 pl-10 border border-line rounded text-sm bg-ground text-ink placeholder:text-muted"
               />
               <div className="absolute left-3 top-2.5">
-                <Icon name="search" size="sm" className="text-slate-400 dark:text-slate-500" />
+                <Icon name="search" size="sm" className="text-muted" />
               </div>
             </div>
           </div>
 
           {(isRefreshing || isLoadingEnablement) && (
-            <div className="flex items-center justify-center py-8 text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-center py-8 text-muted">
               <Icon name="refresh" className="w-8 h-8 animate-spin mr-3" />
               <Typography variant="body" className="text-lg">
                 {isRefreshing ? 'Refreshing tools...' : 'Loading tool preferences...'}
@@ -353,7 +368,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
           )}
 
           {!isRefreshing && !isLoadingEnablement && totalToolsCount === 0 && (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+            <div className="text-center py-8 text-muted">
               {searchTerm ? (
                 <>
                   <Icon name="search" className="w-12 h-12 mx-auto mb-3" />
@@ -388,7 +403,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                         Check your server connection or{' '}
                         <button
                           onClick={handleRefresh}
-                          className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100">
+                          className="text-ink hover:text-muted underline">
                           refresh
                         </button>
                       </>
@@ -461,114 +476,24 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
 
                     {/* Group Tools */}
                     {groupExpanded && (
-                      <div className="bg-white dark:bg-slate-900">
+                      <div className="bg-white dark:bg-slate-900 p-2 divide-y divide-line">
                         {tools.map(tool => {
                           const toolName = tool.originalName || tool.name;
-                          const displayName = tool.displayName || tool.name;
-                          const isEnabled = isToolEnabled(toolName);
-                          const toolExpanded = expandedTools.has(toolName);
                           
                           return (
-                            <div key={toolName} className="border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-                              <div
-                                className={cn(
-                                  "flex items-center justify-between p-3 cursor-pointer transition-colors",
-                                  isEnabled 
-                                    ? "hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                                    : "hover:bg-slate-50 dark:hover:bg-slate-800/30 opacity-60"
-                                )}
-                                onClick={() => toggleToolExpansion(toolName)}>
-                                <div className="flex items-center">
-                                  <Icon
-                                    name="chevron-right"
-                                    size="sm"
-                                    className={cn(
-                                      'mr-2 text-slate-400 dark:text-slate-500 transition-transform',
-                                      toolExpanded ? 'rotate-90' : '',
-                                    )}
-                                  />
-                                  <input
-                                    type="checkbox"
-                                    checked={isEnabled}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleTool(toolName);
-                                    }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                    }}
-                                    className="w-4 h-4 mr-3 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"
-                                  />
-                                  <Typography 
-                                    variant="body" 
-                                    className={cn(
-                                      "font-medium transition-colors",
-                                      isEnabled 
-                                        ? "text-slate-800 dark:text-slate-200"
-                                        : "text-slate-500 dark:text-slate-400"
-                                    )}>
-                                    {displayName}
-                                  </Typography>
-                                  {!isEnabled && (
-                                    <span className="ml-2 px-2 py-0.5 text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
-                                      Disabled
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {toolExpanded && (
-                                <div className={cn(
-                                  "p-3 bg-slate-50 dark:bg-slate-800/50",
-                                  !isEnabled && "opacity-60"
-                                )}>
-                                  {tool.description && (
-                                    <Typography 
-                                      variant="body" 
-                                      className={cn(
-                                        "mb-2",
-                                        isEnabled 
-                                          ? "text-slate-600 dark:text-slate-300"
-                                          : "text-slate-500 dark:text-slate-400"
-                                      )}>
-                                      {tool.description}
-                                    </Typography>
-                                  )}
-                                  <div className="mt-2">
-                                    <Typography 
-                                      variant="caption" 
-                                      className={cn(
-                                        "mb-1",
-                                        isEnabled 
-                                          ? "text-slate-500 dark:text-slate-400"
-                                          : "text-slate-400 dark:text-slate-500"
-                                      )}>
-                                      Schema
-                                    </Typography>
-                                    <pre className={cn(
-                                      "text-xs p-2 whitespace-pre-wrap max-h-60 overflow-y-auto rounded border",
-                                      isEnabled 
-                                        ? "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                                        : "bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600"
-                                    )}>
-                                      {(() => {
-                                        try {
-                                          const schema = (tool as any).schema || (tool as any).input_schema;
-                                          if (!schema) return 'No schema available';
-
-                                          const schemaObject = typeof schema === 'string' ? JSON.parse(schema) : schema;
-                                          return JSON.stringify(schemaObject, null, 2);
-                                        } catch (error) {
-                                          logger.error('Error processing tool schema:', error);
-                                          const schema = (tool as any).schema || (tool as any).input_schema;
-                                          return typeof schema === 'string' ? schema : 'Invalid schema format';
-                                        }
-                                      })()}
-                                    </pre>
-                                  </div>
-                                </div>
+                            <ResourceRow
+                              key={toolName}
+                              name={tool.displayName || tool.name}
+                              description={tool.description}
+                              isEnabled={isToolEnabled(toolName)}
+                              onToggle={() => handleToggleTool(toolName)}
+                              kindLabel="tool"
+                              renderDetail={() => (
+                                <pre className="mt-1 overflow-x-auto rounded-row bg-ground p-1.5 text-[10px] text-muted">
+                                  {renderToolSchema(tool)}
+                                </pre>
                               )}
-                            </div>
+                            />
                           );
                         })}
                       </div>
@@ -588,122 +513,30 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onExecute, onRef
                       ({ungroupedTools.length} tools)
                     </Typography>
                   </div>
-                  <div className="bg-white dark:bg-slate-900">
-                    {ungroupedTools.map(tool => {
-                      const isEnabled = isToolEnabled(tool.name);
-                      const toolExpanded = expandedTools.has(tool.name);
-                      
-                      return (
-                        <div key={tool.name} className="border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-                          <div
-                            className={cn(
-                              "flex items-center justify-between p-3 cursor-pointer transition-colors",
-                              isEnabled 
-                                ? "hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                                : "hover:bg-slate-50 dark:hover:bg-slate-800/30 opacity-60"
-                            )}
-                            onClick={() => toggleToolExpansion(tool.name)}>
-                            <div className="flex items-center">
-                              <Icon
-                                name="chevron-right"
-                                size="sm"
-                                className={cn(
-                                  'mr-2 text-slate-400 dark:text-slate-500 transition-transform',
-                                  toolExpanded ? 'rotate-90' : '',
-                                )}
-                              />
-                              <input
-                                type="checkbox"
-                                checked={isEnabled}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleTool(tool.name);
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                                className="w-4 h-4 mr-3 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"
-                              />
-                              <Typography 
-                                variant="body" 
-                                className={cn(
-                                  "font-medium transition-colors",
-                                  isEnabled 
-                                    ? "text-slate-800 dark:text-slate-200"
-                                    : "text-slate-500 dark:text-slate-400"
-                                )}>
-                                {tool.name}
-                              </Typography>
-                              {!isEnabled && (
-                                <span className="ml-2 px-2 py-0.5 text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
-                                  Disabled
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {toolExpanded && (
-                            <div className={cn(
-                              "p-3 bg-slate-50 dark:bg-slate-800/50",
-                              !isEnabled && "opacity-60"
-                            )}>
-                              {tool.description && (
-                                <Typography 
-                                  variant="body" 
-                                  className={cn(
-                                    "mb-2",
-                                    isEnabled 
-                                      ? "text-slate-600 dark:text-slate-300"
-                                      : "text-slate-500 dark:text-slate-400"
-                                  )}>
-                                  {tool.description}
-                                </Typography>
-                              )}
-                              <div className="mt-2">
-                                <Typography 
-                                  variant="caption" 
-                                  className={cn(
-                                    "mb-1",
-                                    isEnabled 
-                                      ? "text-slate-500 dark:text-slate-400"
-                                      : "text-slate-400 dark:text-slate-500"
-                                  )}>
-                                  Schema
-                                </Typography>
-                                <pre className={cn(
-                                  "text-xs p-2 whitespace-pre-wrap max-h-60 overflow-y-auto rounded border",
-                                  isEnabled 
-                                    ? "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                                    : "bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600"
-                                )}>
-                                  {(() => {
-                                    try {
-                                      const schema = (tool as any).schema || (tool as any).input_schema;
-                                      if (!schema) return 'No schema available';
-
-                                      const schemaObject = typeof schema === 'string' ? JSON.parse(schema) : schema;
-                                      return JSON.stringify(schemaObject, null, 2);
-                                    } catch (error) {
-                                      logger.error('Error processing tool schema:', error);
-                                      const schema = (tool as any).schema || (tool as any).input_schema;
-                                      return typeof schema === 'string' ? schema : 'Invalid schema format';
-                                    }
-                                  })()}
-                                </pre>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="bg-white dark:bg-slate-900 p-2 divide-y divide-line">
+                    {ungroupedTools.map(tool => (
+                      <ResourceRow
+                        key={tool.name}
+                        name={tool.name}
+                        description={tool.description}
+                        isEnabled={isToolEnabled(tool.name)}
+                        onToggle={() => handleToggleTool(tool.name)}
+                        kindLabel="tool"
+                        renderDetail={() => (
+                          <pre className="mt-1 overflow-x-auto rounded-row bg-ground p-1.5 text-[10px] text-muted">
+                            {renderToolSchema(tool)}
+                          </pre>
+                        )}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           )}
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 };
 
