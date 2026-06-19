@@ -49,7 +49,7 @@ const AvailableSkills: React.FC<AvailableSkillsProps> = ({ className }) => {
   }
 
   return (
-    <div className={cn('divide-y divide-line', className)}>
+    <div className={cn('rounded-card border border-line bg-surface shadow-soft divide-y divide-line', className)}>
       <div
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-off-soft transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}>
