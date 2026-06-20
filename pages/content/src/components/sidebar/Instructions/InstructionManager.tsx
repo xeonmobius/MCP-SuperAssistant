@@ -190,13 +190,13 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
 
   // Update instructions when tools or tool enablement changes or custom instructions change
   useEffect(() => {
-    if (tools.length > 0) {
-      // Always update when dependencies change, let the state comparison happen later
-      logMessage(`[InstructionManager] Regenerating instructions based on ${enabledTools.length}/${tools.length} enabled tools`);
-      setInstructions(currentInstructions);
-      // Force update global state to ensure sync
-      instructionsState.setInstructions(currentInstructions);
-    }
+    // Always generate — even with zero tools (no MCP connection), the base
+    // instruction template (custom instructions + skill section) has value.
+    // The old `if (tools.length > 0)` guard left instructions blank when the
+    // SSE/HTTP connection failed, showing an empty panel ("Loading Instructions...").
+    logMessage(`[InstructionManager] Regenerating instructions based on ${enabledTools.length}/${tools.length} enabled tools`);
+    setInstructions(currentInstructions);
+    instructionsState.setInstructions(currentInstructions);
 
     return () => {
       logMessage('[InstructionManager] Cleaning up instruction generator effect');
@@ -205,14 +205,11 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
 
   // Force instruction regeneration and global sync when enablement changes
   const forceInstructionUpdate = useCallback(() => {
-    if (tools.length > 0) {
-      const newInstructions = generateCurrentInstructions();
-      logMessage(`[InstructionManager] Force updating instructions based on ${enabledTools.length}/${tools.length} enabled tools`);
-      setInstructions(newInstructions);
-      // Force global state update
-      instructionsState.setInstructions(newInstructions);
-    }
-  }, [tools.length, generateCurrentInstructions, enabledTools.length]);
+    const newInstructions = generateCurrentInstructions();
+    logMessage(`[InstructionManager] Force updating instructions based on ${enabledTools.length}/${tools.length} enabled tools`);
+    setInstructions(newInstructions);
+    instructionsState.setInstructions(newInstructions);
+  }, [generateCurrentInstructions, enabledTools.length]);
 
   // Watch for changes in enabled tools count and force update when it changes
   const [previousEnabledCount, setPreviousEnabledCount] = useState(enabledTools.length);
@@ -237,13 +234,11 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
     
     // Create a function to check for changes and update instructions
     const checkAndUpdateInstructions = () => {
-      if (tools.length > 0) {
-        const newInstructions = generateCurrentInstructions();
-        if (newInstructions !== instructions) {
-          logMessage('[InstructionManager] Detected tool enablement change, updating instructions');
-          setInstructions(newInstructions);
-          instructionsState.setInstructions(newInstructions);
-        }
+      const newInstructions = generateCurrentInstructions();
+      if (newInstructions !== instructions) {
+        logMessage('[InstructionManager] Detected tool enablement change, updating instructions');
+        setInstructions(newInstructions);
+        instructionsState.setInstructions(newInstructions);
       }
     };
 
@@ -492,7 +487,7 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
           ) : (
             <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
               <pre className="text-xs bg-slate-50 dark:bg-slate-800 p-3 rounded overflow-x-auto text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                {instructions}
+                {instructions || 'No instructions generated. Connect to an MCP server and enable tools.'}
               </pre>
             </div>
           )}
