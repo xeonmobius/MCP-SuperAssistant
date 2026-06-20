@@ -75,7 +75,16 @@ export const UploadedSkillsManager: React.FC = () => {
           description: t.description || '',
         }));
       if (skillItems.length > 0) {
-        useSkillStore.getState().setAvailableSkills(skillItems);
+        const store = useSkillStore.getState();
+        store.setAvailableSkills(skillItems);
+        // Auto-enable uploaded skills that aren't already enabled or explicitly
+        // disabled. Without this, skill_read_asset (L3 disclosure) isn't added
+        // to the tool list (buildCombinedToolList requires enabledSkills > 0).
+        skillItems.forEach(s => {
+          if (!store.enabledSkills.has(s.name)) {
+            store.enableSkill(s.name);
+          }
+        });
       }
     });
   }, [refresh]);
