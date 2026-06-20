@@ -40,7 +40,14 @@ export const useSkillStore = create<SkillState>()(
       loadGeneration: 0,
 
       setAvailableSkills: (skills: SkillItem[]) => {
-        set({ availableSkills: skills });
+        set(state => {
+          // Clean up enabledSkills: remove names no longer in availableSkills.
+          const availableNames = new Set(skills.map(s => s.name));
+          const cleanedEnabled = new Set(
+            [...state.enabledSkills].filter(name => availableNames.has(name))
+          );
+          return { availableSkills: skills, enabledSkills: cleanedEnabled };
+        });
         logger.debug(`[SkillStore] Available skills updated: ${skills.length}`);
         get().loadSkillEnablementState();
       },

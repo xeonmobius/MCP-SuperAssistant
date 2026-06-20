@@ -64,6 +64,24 @@ export const UploadedSkillsManager: React.FC = () => {
   const refresh = useCallback(async () => {
     const res = await uploadedSkillsClient.list();
     setSkills(res?.skills || []);
+    // Re-pull skills from background so the skill store (which InstructionManager
+    // + AvailableSkills read) reflects the current state after upload/delete.
+    uploadedSkillsClient.requestSkills().then(skillRes => {
+      if (!skillRes?.ok) return;
+      const skillItems = (skillRes.tools || [])
+        .filter((t: any) => t.name?.startsWith('skill_'))
+        .map((t: any) => ({
+          name: t._skillName ?? t.name.replace(/^skill_/, '').replace(/_/g, '-'),
+          description: t.description || '',
+        }));
+      const store = useSkillStore.getState();
+      store.setAvailableSkills(skillItems);
+      skillItems.forEach((s: { name: string }) => {
+        if (!store.enabledSkills.has(s.name)) {
+          store.enableSkill(s.name);
+        }
+      });
+    });
   }, []);
 
   useEffect(() => {
