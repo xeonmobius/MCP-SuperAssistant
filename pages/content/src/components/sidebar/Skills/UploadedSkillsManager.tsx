@@ -25,7 +25,11 @@ const walkEntry = async (entry: FileSystemEntry, prefix: string, out: FileEntry[
   const path = prefix ? `${prefix}/${entry.name}` : entry.name;
   if (entry.isFile) {
     const file = await getFile(entry as FileSystemFileEntry);
-    out.push({ path, text: await file.text() });
+    if (path.endsWith('.wasm')) {
+      out.push({ path, text: '', blob: await file.arrayBuffer() });
+    } else {
+      out.push({ path, text: await file.text() });
+    }
   } else if (entry.isDirectory) {
     const reader = (entry as FileSystemDirectoryEntry).createReader();
     // readEntries returns in batches; loop until an empty batch.

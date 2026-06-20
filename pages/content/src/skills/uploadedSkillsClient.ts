@@ -12,7 +12,12 @@ const toEntries = async (files: File[]): Promise<FileEntry[]> => {
   const out: FileEntry[] = [];
   for (const f of files) {
     const path = (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
-    out.push({ path, text: await f.text() });
+    if (path.endsWith('.wasm')) {
+      // Binary: read as ArrayBuffer (text() would corrupt WASM bytes).
+      out.push({ path, text: '', blob: await f.arrayBuffer() });
+    } else {
+      out.push({ path, text: await f.text() });
+    }
   }
   return out;
 };
