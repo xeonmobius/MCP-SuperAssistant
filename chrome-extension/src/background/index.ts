@@ -1304,7 +1304,7 @@ function broadcastToolsUpdateToContentScripts(tools: any[]) {
  * sometimes don't" race. Calling this once skills are persisted guarantees the
  * sidebar receives an authoritative tool+skill list regardless of timing.
  */
-async function broadcastToolsWithSkills(serverUrl: string): Promise<void> {
+async function broadcastToolsWithSkills(serverUrl: string): Promise<boolean> {
   try {
     const primitives = await getPrimitivesWithBackwardsCompatibility(serverUrl, true, connectionType);
     let tools = normalizeTools(primitives);
@@ -1314,8 +1314,10 @@ async function broadcastToolsWithSkills(serverUrl: string): Promise<void> {
     }
     broadcastToolsUpdateToContentScripts(tools);
     logger.debug(`[Background] Re-broadcast ${tools.length} tools (${skills.length} skills) after skill update`);
+    return true;
   } catch (error) {
     logger.warn('[Background] Failed to re-broadcast tools after skill update:', error);
+    return false;
   }
 }
 
@@ -1328,17 +1330,14 @@ async function broadcastToolsWithSkills(serverUrl: string): Promise<void> {
 async function broadcastSkillsAfterUploadChange(): Promise<void> {
   const serverUrl = getServerUrl();
   if (serverUrl) {
-    try {
-      await broadcastToolsWithSkills(serverUrl);
-      return;
-    } catch {
-      // Server unreachable — fall through to skills-only.
-    }
+    const ok = await broadcastToolsWithSkills(serverUrl);
+    if (ok) return; // Full broadcast succeeded (tools + skills sent together).
+    // Server unreachable — fall through to skills-only.
   }
   const skills = getCachedSkills();
   const skillTools = skills.length > 0 ? skills.map(s => skillToPseudoTool(s)) : [];
   broadcastToolsUpdateToContentScripts(skillTools);
-  logger.debug(`[Background] Broadcast ${skillTools.length} skills (no-server path)`);
+  logger.debug(`[Background] Broadcast ${skillTools.length} skills (no-server/fallback path)`);
 }
 
 /**
