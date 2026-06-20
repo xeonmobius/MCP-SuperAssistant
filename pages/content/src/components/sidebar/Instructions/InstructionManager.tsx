@@ -450,28 +450,20 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
             ) : (
               <>
                 <ActionButton onClick={() => setIsEditing(true)} color="blue" label="Edit" />
-                {/* <ActionButton 
-                  onClick={handleCopyToClipboard} 
+                <ActionButton
+                  onClick={handleCopyToClipboard}
                   loading={isCopying}
                   success={copySuccess}
-                  color="amber" 
-                  label="Copy" 
+                  color="amber"
+                  label="Copy"
                 />
-                <ActionButton 
-                  onClick={handleInsertInChat} 
+                <ActionButton
+                  onClick={handleInsertInChat}
                   loading={isInserting}
                   success={insertSuccess}
-                  color="green" 
-                  label="Insert" 
+                  color="green"
+                  label="Insert"
                 />
-                <ActionButton 
-                  onClick={handleAttachAsFile} 
-                  loading={isAttaching}
-                  success={attachSuccess}
-                  disabled={!adapter.supportsFileUpload()} 
-                  color="purple" 
-                  label="Attach" 
-                /> */}
               </>
             )}
           </div>
