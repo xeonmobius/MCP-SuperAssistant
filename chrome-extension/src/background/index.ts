@@ -21,7 +21,7 @@ import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer
 import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser';
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 import { uploadedStore } from '../skills/uploaded-store';
-import { parseUploadedFolder } from '../skills/uploaded-parser';
+import { parseUploadedFiles, type FileEntry } from '../skills/uploaded-parser';
 
 // Import message types for type safety
 import type {
@@ -745,7 +745,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 /**
  * Uploaded-skill CRUD handler. Routed from the onMessage listener for any
  * `uploadedSkill:` message type. `message.files`, when present, must be a
- * `File[]` shape that `parseUploadedFolder` accepts (see Task 6 contract note).
+ * `FileEntry[]` (`{path, text}[]`) — the content side extracts text +
+ * webkitRelativePath BEFORE sendMessage because File objects and the
+ * non-enumerable `webkitRelativePath` do not survive the structured clone
+ * across content→background.
  */
 async function handleUploadedSkillMessage(
   message: any,
@@ -753,7 +756,8 @@ async function handleUploadedSkillMessage(
 ) {
   if (message.type === 'uploadedSkill:upload' && message.files && uploadedStore) {
     try {
-      const parsed = await parseUploadedFolder(message.files as File[]);
+      const entries: FileEntry[] = Array.isArray(message.files) ? message.files : [];
+      const parsed = await parseUploadedFiles(entries);
       if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
       const exists = (await uploadedStore.listUploadedSkills()).some(s => s.name === parsed.skill.name);
       if (exists) { sendResponse({ ok: false, error: 'name-exists' }); return; }
@@ -783,7 +787,8 @@ async function handleUploadedSkillMessage(
 
   if (message.type === 'uploadedSkill:replace' && message.files && uploadedStore) {
     try {
-      const parsed = await parseUploadedFolder(message.files as File[]);
+      const entries: FileEntry[] = Array.isArray(message.files) ? message.files : [];
+      const parsed = await parseUploadedFiles(entries);
       if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
       await uploadedStore.saveUploadedSkill(parsed.skill, parsed.references); // overwrites same-name
       await refreshUploadedSkillsInCache();
