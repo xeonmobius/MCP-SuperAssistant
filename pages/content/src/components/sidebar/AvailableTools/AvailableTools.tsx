@@ -212,13 +212,21 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRef
 
   const handleEnableAll = () => {
     setHasUnsavedChanges(true);
-    enableAllTools();
+    // Enable each tool the component displays (effectiveTools), not just
+    // store.availableTools (which may be empty when no MCP server is connected).
+    effectiveTools.forEach(tool => {
+      const name = tool.originalName || tool.name;
+      if (!isToolEnabled(name)) enableTool(name);
+    });
     logMessage('[AvailableTools] All tools enabled');
   };
 
   const handleDisableAll = () => {
     setHasUnsavedChanges(true);
-    disableAllTools();
+    effectiveTools.forEach(tool => {
+      const name = tool.originalName || tool.name;
+      if (isToolEnabled(name)) disableTool(name);
+    });
     logMessage('[AvailableTools] All tools disabled');
   };
 
