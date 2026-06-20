@@ -53,11 +53,11 @@ const manifest = {
   permissions: ['storage', 'clipboardWrite', 'alarms'],
   // Phase 2: allow WebAssembly compilation ('wasm-unsafe-eval').
   // MV3 forbids remote URLs in script-src — only 'self' + 'wasm-unsafe-eval'.
-  // Pyodide must be bundled locally (not CDN) or fetched as a blob.
-  // connect-src allows fetch() from CDN for downloading Pyodide bytes.
+  // Do NOT specify connect-src (MV3 default is permissive; specifying it would
+  // block MCP server connections like localhost:3006).
   content_security_policy: {
     extension_pages:
-      "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://pyodide-cdn2.anaconda.org",
+      "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
   },
   // permissions: ['storage', 'scripting', 'clipboardWrite'],
   // options_page: 'options/index.html',
