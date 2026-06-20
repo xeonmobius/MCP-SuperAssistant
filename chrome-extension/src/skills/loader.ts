@@ -1,4 +1,6 @@
 import { parseSkillMarkdown, type Skill } from './parser';
+import { uploadedSkillToSkill, type UploadedSkill } from './uploaded-parser';
+import { uploadedStore } from './uploaded-store';
 import { createLogger } from '@extension/shared/lib/logger';
 
 const logger = createLogger('SkillLoader');
@@ -341,4 +343,22 @@ export async function loadPersistedSkills(): Promise<Skill[]> {
     logger.warn('[SkillLoader] Failed to load persisted skills:', error);
     return [];
   }
+}
+
+export async function loadUploadedSkills(): Promise<Skill[]> {
+  try {
+    if (!uploadedStore) return [];
+    const uploaded: UploadedSkill[] = await uploadedStore.listUploadedSkills();
+    return uploaded.map(uploadedSkillToSkill);
+  } catch (err) {
+    logger.warn('[SkillLoader] Failed to load uploaded skills:', err);
+    return [];
+  }
+}
+
+/** Refresh uploaded skills into the cache (de-dupe source==='uploaded', append fresh). */
+export async function refreshUploadedSkillsInCache(): Promise<void> {
+  const uploaded = await loadUploadedSkills();
+  const withoutUploaded = getCachedSkills().filter(s => s.source !== 'uploaded');
+  setCachedSkills([...withoutUploaded, ...uploaded]);
 }

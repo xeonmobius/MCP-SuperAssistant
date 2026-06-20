@@ -17,7 +17,7 @@ import {
 } from '../mcpclient/index';
 import { sendAnalyticsEvent, trackError, collectDemographicData } from '../../utils/analytics';
 import { analyticsService } from '../../utils/analytics-service';
-import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths } from '../skills/loader';
+import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths, refreshUploadedSkillsInCache } from '../skills/loader';
 import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser';
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 
@@ -386,6 +386,7 @@ async function tryConnectToServer(uri: string, type: ConnectionType = connection
     // Skills are now persisted in the cache. Re-broadcast the tool list WITH
     // skill pseudo-tools so the sidebar reflects them without a manual refresh.
     // (The initial broadcast above only contained raw MCP tools.)
+    await refreshUploadedSkillsInCache();
     await broadcastToolsWithSkills(uri);
     
     connectionAttemptCount = 0; // Reset counter on success
@@ -1081,6 +1082,9 @@ async function handleMcpMessage(
 
           if (allSkills.length > 0) {
             await persistSkills(allSkills);
+            // Re-merge uploaded skills (persistSkills above replaces the cache,
+            // which would otherwise drop them on every manual reload).
+            await refreshUploadedSkillsInCache();
             // Push the refreshed skill set to every open sidebar.
             await broadcastToolsWithSkills(uri);
           }
