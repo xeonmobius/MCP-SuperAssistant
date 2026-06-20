@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createUploadedStore, type StoreDeps } from '../uploaded-store';
-import type { UploadedSkill } from '../uploaded-parser';
+import type { UploadedSkill, ScriptBlob } from '../uploaded-parser';
 
 // fake-indexeddb/auto registers a global `indexedDB` (and IDBKeyRange, etc.)
 // We pass that global as the injected idbFactory — no hand-rolled mock needed.
@@ -62,5 +62,58 @@ describe('uploaded-store', () => {
     const store = createUploadedStore(deps);
     await store.saveUploadedSkill(skill('s1'), new Map());
     expect(await store.readReference('s1', 'nope.md')).toBeUndefined();
+  });
+});
+
+describe('uploaded-store scripts store (Phase 2)', () => {
+  const wasmBytes = new Uint8Array([0x00, 0x61, 0x73, 0x6d]).buffer;
+  const wasmBlob: ScriptBlob = { path: 'scripts/s.wasm', blob: wasmBytes, language: 'wasm' };
+
+  it('saveScript + readScript roundtrip the blob + language', async () => {
+    const store = createUploadedStore(deps);
+    await store.saveScript('s1', 'scripts/s.wasm', wasmBytes, 'wasm');
+    const got = await store.readScript('s1', 'scripts/s.wasm');
+    expect(got).toBeDefined();
+    expect(got?.language).toBe('wasm');
+    // IDB structured-clones the ArrayBuffer → compare bytes, not identity.
+    expect(Array.from(new Uint8Array(got!.blob))).toEqual([0x00, 0x61, 0x73, 0x6d]);
+    expect(got?.size).toBe(4);
+  });
+
+  it('readScript returns undefined for a missing script', async () => {
+    const store = createUploadedStore(deps);
+    expect(await store.readScript('s1', 'nope.wasm')).toBeUndefined();
+  });
+
+  it('saveUploadedSkill persists an optional scriptBlob', async () => {
+    const store = createUploadedStore(deps);
+    await store.saveUploadedSkill(skill('s1'), new Map(), wasmBlob);
+    const got = await store.readScript('s1', 'scripts/s.wasm');
+    expect(got?.language).toBe('wasm');
+    expect(Array.from(new Uint8Array(got!.blob))).toEqual([0x00, 0x61, 0x73, 0x6d]);
+  });
+
+  it('deleteUploadedSkill cascades into the scripts store', async () => {
+    const store = createUploadedStore(deps);
+    await store.saveUploadedSkill(skill('s1'), new Map(), wasmBlob);
+    expect(await store.readScript('s1', 'scripts/s.wasm')).toBeDefined();
+    await store.deleteUploadedSkill('s1');
+    expect(await store.readScript('s1', 'scripts/s.wasm')).toBeUndefined();
+  });
+
+  it('deleteScripts removes only the named skill\u2019s scripts', async () => {
+    const store = createUploadedStore(deps);
+    await store.saveScript('a', 'x.wasm', wasmBytes, 'wasm');
+    await store.saveScript('b', 'x.wasm', wasmBytes, 'wasm');
+    await store.deleteScripts('a');
+    expect(await store.readScript('a', 'x.wasm')).toBeUndefined();
+    expect(await store.readScript('b', 'x.wasm')).toBeDefined();
+  });
+
+  it('re-saving a skill without a scriptBlob clears the old script', async () => {
+    const store = createUploadedStore(deps);
+    await store.saveUploadedSkill(skill('s1'), new Map(), wasmBlob);
+    await store.saveUploadedSkill(skill('s1'), new Map()); // no script this time
+    expect(await store.readScript('s1', 'scripts/s.wasm')).toBeUndefined();
   });
 });

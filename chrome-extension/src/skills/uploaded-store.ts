@@ -1,9 +1,20 @@
-import type { UploadedSkill } from './uploaded-parser';
+import type { UploadedSkill, ScriptBlob, ScriptLanguage } from './uploaded-parser';
 
 const STORAGE_KEY = 'uploadedSkills';
 const DB_NAME = 'mcp-skills';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_REFS = 'references';
+const STORE_SCRIPTS = 'scripts';
+
+export interface StoredScript {
+  key: string;
+  skillName: string;
+  path: string;
+  blob: ArrayBuffer;
+  language: ScriptLanguage;
+  size: number;
+  uploadedAt: number;
+}
 
 export interface StoreDeps {
   storage: {
@@ -21,6 +32,10 @@ function openDb(factory: IDBFactory): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_REFS)) {
         const os = db.createObjectStore(STORE_REFS, { keyPath: 'key' });
         os.createIndex('skillName', 'skillName', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(STORE_SCRIPTS)) {
+        const sc = db.createObjectStore(STORE_SCRIPTS, { keyPath: 'key' });
+        sc.createIndex('skillName', 'skillName', { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -67,6 +82,7 @@ export function createUploadedStore(deps: StoreDeps) {
   const saveUploadedSkill = async (
     skill: UploadedSkill,
     references: Map<string, string>,
+    scriptBlob?: ScriptBlob,
   ): Promise<void> => {
     const all = (await listUploadedSkills()).filter(s => s.name !== skill.name);
     all.push(skill);
@@ -74,11 +90,13 @@ export function createUploadedStore(deps: StoreDeps) {
 
     const db = await openDb(idbFactory);
     try {
-      const tx = db.transaction(STORE_REFS, 'readwrite');
-      const store = tx.objectStore(STORE_REFS);
-      await deleteBySkillName(store, skill.name);
+      const tx = db.transaction([STORE_REFS, STORE_SCRIPTS], 'readwrite');
+      const refs = tx.objectStore(STORE_REFS);
+      const scripts = tx.objectStore(STORE_SCRIPTS);
+      await deleteBySkillName(refs, skill.name);
+      await deleteBySkillName(scripts, skill.name);
       for (const [path, text] of references) {
-        store.put({
+        refs.put({
           key: `${skill.name}::${path}`,
           skillName: skill.name,
           path,
@@ -87,6 +105,69 @@ export function createUploadedStore(deps: StoreDeps) {
           uploadedAt: skill.uploadedAt,
         });
       }
+      if (scriptBlob) {
+        scripts.put({
+          key: `${skill.name}::${scriptBlob.path}`,
+          skillName: skill.name,
+          path: scriptBlob.path,
+          blob: scriptBlob.blob,
+          language: scriptBlob.language,
+          size: scriptBlob.blob.byteLength,
+          uploadedAt: skill.uploadedAt,
+        });
+      }
+      await txDone(tx);
+    } finally {
+      db.close();
+    }
+  };
+
+  const saveScript = async (
+    skillName: string,
+    path: string,
+    blob: ArrayBuffer,
+    language: ScriptLanguage,
+  ): Promise<void> => {
+    const db = await openDb(idbFactory);
+    try {
+      const tx = db.transaction(STORE_SCRIPTS, 'readwrite');
+      tx.objectStore(STORE_SCRIPTS).put({
+        key: `${skillName}::${path}`,
+        skillName,
+        path,
+        blob,
+        language,
+        size: blob.byteLength,
+        uploadedAt: Date.now(),
+      });
+      await txDone(tx);
+    } finally {
+      db.close();
+    }
+  };
+
+  const readScript = async (
+    skillName: string,
+    path: string,
+  ): Promise<StoredScript | undefined> => {
+    const db = await openDb(idbFactory);
+    try {
+      const tx = db.transaction(STORE_SCRIPTS, 'readonly');
+      return await new Promise<StoredScript | undefined>((resolve, reject) => {
+        const req = tx.objectStore(STORE_SCRIPTS).get(`${skillName}::${path}`);
+        req.onsuccess = () => resolve(req.result as StoredScript | undefined);
+        req.onerror = () => reject(req.error);
+      });
+    } finally {
+      db.close();
+    }
+  };
+
+  const deleteScripts = async (skillName: string): Promise<void> => {
+    const db = await openDb(idbFactory);
+    try {
+      const tx = db.transaction(STORE_SCRIPTS, 'readwrite');
+      await deleteBySkillName(tx.objectStore(STORE_SCRIPTS), skillName);
       await txDone(tx);
     } finally {
       db.close();
@@ -99,8 +180,9 @@ export function createUploadedStore(deps: StoreDeps) {
 
     const db = await openDb(idbFactory);
     try {
-      const tx = db.transaction(STORE_REFS, 'readwrite');
+      const tx = db.transaction([STORE_REFS, STORE_SCRIPTS], 'readwrite');
       await deleteBySkillName(tx.objectStore(STORE_REFS), name);
+      await deleteBySkillName(tx.objectStore(STORE_SCRIPTS), name);
       await txDone(tx);
     } finally {
       db.close();
@@ -132,6 +214,9 @@ export function createUploadedStore(deps: StoreDeps) {
     saveUploadedSkill,
     deleteUploadedSkill,
     readReference,
+    saveScript,
+    readScript,
+    deleteScripts,
   };
 }
 
