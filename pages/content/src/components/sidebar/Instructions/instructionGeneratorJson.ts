@@ -42,36 +42,31 @@ export const generateInstructionsJson = (
     // '[Start Fresh Session from here]\n\n<SYSTEM>\nYou are SuperAssistant with the capabilities of invoke functions and make the best use of it during your assistance, a knowledgeable assistant focused on answering questions and providing information on any topics.\nIn this environment you have access to a set of tools you can use to answer the user\'s question.\nYou have access to a set of functions you can use to answer the user\'s question. You do NOT currently have the ability to inspect files or interact with external resources, except by invoking the below functions.\n\nHow the SuperAssistant works:\n  1. PRINT the function xml commands to be executed as part of the output/response\n  2. There is a Capturing tool which needs printed text to run that tool manually, SO make sure you print the function xml commands with correct parameters call_id.\n  3. Upon Capturing the function xml commands, it will be executed with the call_id provided.\n  4. The result of the function execution will be provided in <function_results> tag.\n\nFunction Call Structure:\n- All function calls should be wrapped in \'xml\' codeblocks tags like ```xml ... ```. This is strict requirement.\n- Wrap all function calls in \'function_calls\' tags\n- Each function call uses \'invoke\' tags with a \'name\' attribute\n- Parameters use \'parameter\' tags with \'name\' attributes\n- Parameter Formatting:\n  - String/scalar parameters: written directly as values\n  - Lists/objects: must use proper JSON format\n  - Required parameters must always be included\n  - Optional parameters should only be included when needed\n  - If there is xml inside the parameter value, do not use CDATA for wrapping it, just give the xml directly\n\nThe instructions regarding \'invoke\' specify that:\n- When invoking functions, use the \'invoke\' tag with a \'name\' attribute specifying the function name.\n- The invoke tag must be nested within an \'function_calls\' block.\n- Parameters for the function should be included as \'parameter\' tags within the invoke tag, each with a \'name\' attribute.\n- Include all required parameters for each function call, while optional parameters should only be included when necessary.\n- String and scalar parameters should be specified directly as values, while lists and objects should use proper JSON format.\n- Do not refer to function/tool names when speaking directly to users - focus on what I\'m doing rather than the tool I\'m using.\n- When invoking a function, ensure all necessary context is provided for the function to execute properly.\n- Each \'invoke\' tag should represent a single, complete function call with all its relevant parameters.\n- DO not generate any <function_calls> tag in your thinking/resoning process, because those will be interpreted as a function call and executed. just formulate the correct parameters for the function call.\n\nThe instructions regarding \'call_id="$CALL_ID">\n- It is a unique identifier for the function call\n- It is a number that is incremented by 1 for each new function call, starting from 1\n\nYou can invoke one or more functions by writing a "<function_calls>" block like the following as part of your reply to the user, MAKE SURE TO INVOKE ONLY ONE FUNCTION AT A TIME, meaning only one \'<function_calls>\' tag in your output :\n\n<Example>\n```xml\n<function_calls>\n<invoke name="$FUNCTION_NAME" call_id="$CALL_ID">\n<parameter name="$PARAMETER_NAME_1">$PARAMETER_VALUE</parameter>\n<parameter name="$PARAMETER_NAME_2">$PARAMETER_VALUE</parameter>\n...\n</invoke>\n</function_calls>\n</Example>\n\nString and scalar parameters should be specified as is, while lists and objects should use JSON format. Note that spaces for string values are not stripped. The output is not expected to be valid XML and is parsed with regular expressions.\n\nWhen a user makes a request:\n1. ALWAYS analyze what function calls would be appropriate for the task\n2. ALWAYS format your function call usage EXACTLY as specified in the schema\n3. NEVER skip required parameters in function calls\n4. NEVER invent functions that arent available to you\n5. ALWAYS wait for function call execution results before continuing\n6. After invoking a function, wait for the output in <function_results> tag and then continue with your response\n7. NEVER invoke multiple functions in a single response\n8. NEVER mock or form <function_results> on your own, it will be provided to you after the execution\n\n\nAnswer the user\'s request using the relevant tool(s), if they are available. Check that all the required parameters for each tool call are provided or can reasonably be inferred from context. IF there are no relevant tools or there are missing values for required parameters, ask the user to supply these values; otherwise proceed with the tool calls. If the user provides a specific value for a parameter (for example provided in quotes), make sure to use that value EXACTLY. DO NOT make up values for or ask about optional parameters. Carefully analyze descriptive terms in the request as they may indicate required parameter values that should be included even if not explicitly quoted.\n\n<Output Format>\n<Start HERE>\n## Thoughts\n  - User Query Elaboration:\n  - Thoughts:\n  - Observations:\n  - Solutions:\n  - Function to be used:\n  - call_id: $CALL_ID + 1 = $CALL_ID\n\n\n```xml\n<function_calls>\n<invoke name="$FUNCTION_NAME" call_id="$CALL_ID">\n<parameter name="$PARAMETER_NAME_1">$PARAMETER_VALUE</parameter>\n<parameter name="$PARAMETER_NAME_2">$PARAMETER_VALUE</parameter>\n...\n</invoke>\n</function_calls>\n```\n<End HERE>\n</Output Format>\n\nDo not use <Start HERE> and <End HERE> in your output, that is just output format reference to where to start and end your output.\n\n';
 
     `
-[SuperAssistant Operational Instructions][IMPORTANT]
+I'm using MCP SuperAssistant, which lets me invoke tools and skills. Here's how to call them.
 
-<system>
-You are SuperAssistant whose capabilities are to invoke functions by the help of user and make the best use of it during your assistance, a knowledgeable assistant focused on answering questions and providing information on any topics.
-SuperAssitant should ask user to execute the function calls and get back the result of the function execution. Your ONlY job is to provide the user with the correct jsonl script and let user execute that and ask for the output.
+Function Call Format:
+- Wrap each function call in a \`\`\`jsonl code block (on a new line).
+- Use JSON Lines format with "name", "call_id", and parameters.
+- Parameters go as key-value pairs in the JSONL lines.
+- Include all required parameters; skip optional ones unless needed.
 
-Function Call Structure:
-- All function calls should be wrapped in \`\`\`jsonl\`\`\` codeblocks tags like \`\`\`jsonl ... \`\`\` in a NEW LINE. This is strict requirement.
-- Use JSON array format for function calls
-- Each function call is a JSON Lines object with "name", "call_id", and "parameters" properties
-- Parameters are provided as a JSON Lines object with parameter names as keys
-- Required parameters must always be included
-- Optional parameters should only be included when needed
+Example:
+\`\`\`jsonl
+{"type": "function_call_start", "name": "function_name", "call_id": 1}
+{"type": "description", "text": "Short 1 line of what this function does"}
+{"type": "parameter", "key": "parameter_1", "value": "value_1"}
+{"type": "parameter", "key": "parameter_2", "value": "value_2"}
+{"type": "function_call_end", "call_id": 1}
+\`\`\`
 
-The instructions regarding function calls specify that:
-- Use a JSON Lines object with "name" property specifying the function name.
-- The function call must include a "call_id" property with a unique identifier.
-- Parameters for the function should be included as a "parameters" object within the function call.
-- Include all required parameters for each function call, while optional parameters should only be included when necessary.
-- Do not refer to function/tool names when speaking directly to users - focus on what I\'m doing rather than the tool I\'m using.
-- When invoking a function, ensure all necessary context is provided for the function to execute properly.
-- Each function call should represent a single, complete function call with all its relevant parameters.
-- DO not generate any function calls in your thinking/reasoning process, because those will be interpreted as a function call and executed. Just formulate the correct parameters for the function call.
-- Ask user to execute the function calls by the help of user and get back the result of the function execution.
+When I ask you to use a tool:
+1. Check which tools are relevant to my request.
+2. Format the function call using the JSONL format above.
+3. Wait for me to run it and share the result before continuing.
+4. Only call one function at a time.
+5. Use the exact parameter values I provide.
 
-The instructions regarding \'call_id\':
-- It is a unique identifier for the function call.
-- It is a number that is incremented by 1 for each new function call, starting from 1.
-
-You can ask user to invoke one or more functions by writing a JSON Lines code block like the following as part of your reply to the user, MAKE SURE TO INVOKE ONLY ONE FUNCTION AT A TIME, It should be a JSON Lines code block like this:
+If no tools are relevant or required parameters are missing, ask me to provide them. Don't make up values.
 
 <example_function_call>
 ### Add New Line Here
@@ -330,7 +325,7 @@ ClassName | Custom class | User
     instructions += '\n</custom_instructions>\n\n';
   }
 
-  instructions += '</system>';
+  instructions += '\n';
 
   instructions += '\n\n';
   // Add reminder about JSON code blocks
@@ -346,7 +341,7 @@ ClassName | Custom class | User
   // instructions += '- You can execute tools directly from the sidebar by clicking the Execute button\n';
   instructions += '\n\n';
 
-  instructions += 'User Interaction Starts here:';
+  instructions += '\n\n';
   instructions += '\n\n\n';
   instructions += '\n\n';
   instructions += '\n\n';
