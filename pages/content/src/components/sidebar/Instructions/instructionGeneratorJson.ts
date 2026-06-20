@@ -195,8 +195,9 @@ ClassName | Custom class | User
 
   // instructions += '\n';
 
-  // Add available tools section
-  instructions += '## AVAILABLE TOOLS FOR SUPERASSISTANT\n\n';
+  // Add available tools section ONLY if there are tools
+  if (mcpTools.length > 0) {
+  instructions += '## AVAILABLE TOOLS\n\n';
 
   // Add each tool with its schema
   mcpTools.forEach(tool => {
@@ -300,6 +301,10 @@ ClassName | Custom class | User
     instructions += `**Description**: Read a reference file bundled with a skill (examples, docs, code samples). Use this to load only what you need from a skill, keeping context small.\n`;
     instructions += `**Parameters**:\n`;
     instructions += `- \`skill_name\`: The name of the skill to read from (string) (required)\n`;
+    instructions += `- \`file_path\`: The file path relative to the skill folder, e.g. "examples/demo.md" (string) (required)\n\n`;
+  }
+
+  } // end if (mcpTools.length > 0)
     instructions += `- \`file_path\`: The file path relative to the skill folder, e.g. "examples/demo.md" (string) (required)\n\n`;
   }
 

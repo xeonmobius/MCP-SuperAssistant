@@ -205,11 +205,13 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
   }, [toolsSignature, enabledToolsSignature, customInstructionsKey, currentInstructions, enabledTools.length, tools.length]);
 
   // Auto-insert instructions into the host chat ONCE when autoInsert is on
-  // + skills are loaded. Dedicated effect with a delay so the host chat's
-  // input element is ready. Flag set AFTER success so it retries if it fails.
+  // + there are actual tools OR skills to inject. Skip if both are empty
+  // (no point injecting an instruction block with no content).
   useEffect(() => {
     if (!preferences.autoInsert || hasAutoInserted.current) return;
-    if (skillAvailable.length === 0 || !currentInstructions) return;
+    // Don't inject if there's nothing to show (no tools AND no skills).
+    if (enabledTools.length === 0 && skillAvailable.length === 0) return;
+    if (!currentInstructions) return;
 
     const timer = setTimeout(() => {
       try {
