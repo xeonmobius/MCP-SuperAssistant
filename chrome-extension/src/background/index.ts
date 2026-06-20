@@ -812,6 +812,7 @@ async function handleUploadedSkillMessage(
 
   // Unhandled uploadedSkill: subtype (e.g. store undefined in non-chrome runtime).
   sendResponse({ ok: false, error: 'not-handled' });
+  return true;
 }
 
 async function saveParsedSkills(
