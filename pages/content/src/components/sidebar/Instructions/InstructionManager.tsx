@@ -199,24 +199,13 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
     setInstructions(currentInstructions);
     instructionsState.setInstructions(currentInstructions);
 
-    // Auto-insert + auto-submit instructions once into the host chat when
-    // autoInsert is on + skills are loaded. The instructions are SENT as a
-    // message (not just placed in the input field) so the AI reads them +
-    // remembers them for the rest of the conversation.
+    // Auto-insert instructions once into the host chat when autoInsert is on
+    // + skills are loaded. Fires after the PULL model populates the skill store.
     if (preferences.autoInsert && !hasAutoInserted.current && currentInstructions && skillAvailable.length > 0) {
       hasAutoInserted.current = true;
       try {
         adapter.insertTextIntoInput(currentInstructions);
-        logMessage('[InstructionManager] Auto-inserted instructions into chat input');
-        // Submit after a delay so the text settles in the host's input field.
-        setTimeout(() => {
-          try {
-            adapter.triggerSubmission();
-            logMessage('[InstructionManager] Auto-submitted instructions');
-          } catch (err) {
-            logger.error('Auto-submit failed:', err);
-          }
-        }, 500);
+        logMessage('[InstructionManager] Auto-inserted instructions into chat');
       } catch (err) {
         logger.error('Auto-insert failed:', err);
       }
