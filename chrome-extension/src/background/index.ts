@@ -20,6 +20,7 @@ import { analyticsService } from '../../utils/analytics-service';
 import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer, persistSkills, loadPersistedSkills, getSkillsPaths, setSkillsPaths, refreshUploadedSkillsInCache } from '../skills/loader';
 import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser';
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
+import { uploadedStore } from '../skills/uploaded-store';
 
 // Import message types for type safety
 import type {
@@ -770,7 +771,16 @@ async function handleMcpMessage(
           } else {
             const skills = getCachedSkills();
             const skill = skills.find(s => s.name === skill_name);
-            if (!skill || !skill.sourceDir) {
+            if (skill && skill.source === 'uploaded') {
+              try {
+                const text = uploadedStore ? await uploadedStore.readReference(skill_name, file_path) : undefined;
+                result = text
+                  ? { content: [{ type: 'text', text }] }
+                  : { content: [{ type: 'text', text: `Asset "${file_path}" not found in uploaded skill "${skill_name}"` }], isError: true };
+              } catch (err) {
+                result = { content: [{ type: 'text', text: `Failed to read uploaded asset "${file_path}": ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+              }
+            } else if (!skill || !skill.sourceDir) {
               result = { content: [{ type: 'text', text: `Skill "${skill_name}" not found or has no source directory` }], isError: true };
             } else {
               const resolvedPath = resolveSkillAssetPath(skill.sourceDir, file_path);
