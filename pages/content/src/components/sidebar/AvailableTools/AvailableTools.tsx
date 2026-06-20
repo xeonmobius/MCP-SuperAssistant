@@ -215,7 +215,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRef
     // Enable each tool the component displays (effectiveTools), not just
     // store.availableTools (which may be empty when no MCP server is connected).
     effectiveTools.forEach(tool => {
-      const name = tool.originalName || tool.name;
+      const name = tool.name;
       if (!isToolEnabled(name)) enableTool(name);
     });
     logMessage('[AvailableTools] All tools enabled');
@@ -224,7 +224,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRef
   const handleDisableAll = () => {
     setHasUnsavedChanges(true);
     effectiveTools.forEach(tool => {
-      const name = tool.originalName || tool.name;
+      const name = tool.name;
       if (isToolEnabled(name)) disableTool(name);
     });
     logMessage('[AvailableTools] All tools disabled');
@@ -233,10 +233,10 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRef
   // Group-level operations
   const handleToggleGroup = (serverName: string, tools: ExtendedTool[]) => {
     setHasUnsavedChanges(true);
-    const allEnabled = tools.every(tool => isToolEnabled(tool.originalName || tool.name));
+    const allEnabled = tools.every(tool => isToolEnabled(tool.name));
     
     tools.forEach(tool => {
-      const toolName = tool.originalName || tool.name;
+      const toolName = tool.name;
       if (allEnabled) {
         disableTool(toolName);
       } else {
@@ -252,11 +252,11 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRef
   const totalToolsCount = effectiveToolsCount;
 
   const isGroupEnabled = (tools: ExtendedTool[]) => {
-    return tools.every(tool => isToolEnabled(tool.originalName || tool.name));
+    return tools.every(tool => isToolEnabled(tool.name));
   };
 
   const isGroupPartiallyEnabled = (tools: ExtendedTool[]) => {
-    const enabledCount = tools.filter(tool => isToolEnabled(tool.originalName || tool.name)).length;
+    const enabledCount = tools.filter(tool => isToolEnabled(tool.name)).length;
     return enabledCount > 0 && enabledCount < tools.length;
   };
 
@@ -479,7 +479,7 @@ const AvailableTools: React.FC<AvailableToolsProps> = ({ tools, onRefresh, isRef
                     {groupExpanded && (
                       <div className="bg-surface p-2 divide-y divide-line">
                         {tools.map(tool => {
-                          const toolName = tool.originalName || tool.name;
+                          const toolName = tool.name;
                           
                           return (
                             <ResourceRow
