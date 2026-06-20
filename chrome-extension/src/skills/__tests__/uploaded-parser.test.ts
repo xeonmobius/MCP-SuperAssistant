@@ -142,7 +142,7 @@ describe('parseUploadedFiles - script classification (Phase 2)', () => {
   });
 
   it('classifies .py matching run: as a script, not a text reference', async () => {
-    const pyBytes = new TextEncoder().encode('print(1)').buffer;
+    const pyBytes = new TextEncoder().encode('print(1)').buffer as ArrayBuffer;
     const res = await parseUploadedFiles([
       { path: 'an/SKILL.md', text: '---\nname: an\ndescription: d\nrun: main.py\n---\nbody' },
       { path: 'an/main.py', text: '', blob: pyBytes },

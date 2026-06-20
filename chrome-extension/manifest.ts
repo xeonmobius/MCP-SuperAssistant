@@ -51,6 +51,14 @@ const manifest = {
   ],
 
   permissions: ['storage', 'clipboardWrite', 'alarms'],
+  // Phase 2: allow WebAssembly compilation ('wasm-unsafe-eval') and Pyodide
+  // loading from the jsdelivr CDN. worker-src falls back to script-src, so the
+  // bundled same-origin worker + the worker's runtime import() of pyodide.mjs
+  // are both covered.
+  content_security_policy: {
+    extension_pages:
+      "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; object-src 'self'",
+  },
   // permissions: ['storage', 'scripting', 'clipboardWrite'],
   // options_page: 'options/index.html',
   background: {

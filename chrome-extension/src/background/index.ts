@@ -22,6 +22,7 @@ import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 import { uploadedStore } from '../skills/uploaded-store';
 import { parseUploadedFiles, type FileEntry, type ParsedFolder } from '../skills/uploaded-parser';
+import { executeScript } from '../skills/script-executor';
 
 // Import message types for type safety
 import type {
@@ -825,7 +826,7 @@ async function saveParsedSkills(
   for (const pf of parsed.skills) {
     if (existing.some(s => s.name === pf.skill.name)) return { ok: false, error: 'name-exists' };
     if (diskNames.has(pf.skill.name)) return { ok: false, error: 'conflicts-with-disk' };
-    await uploadedStore!.saveUploadedSkill(pf.skill, pf.references);
+    await uploadedStore!.saveUploadedSkill(pf.skill, pf.references, pf.scriptBlob);
     existing.push(pf.skill);
     savedNames.push(pf.skill.name);
   }
@@ -910,10 +911,32 @@ async function handleMcpMessage(
           // `foo--bar` -> "Skill not found".
           const skill = skills.find(s => `skill_${encodeSkillName(s.name)}` === toolName);
           if (skill) {
-            result = {
-              content: [{ type: 'text', text: skill.content }],
-            };
-            logger.debug(`[Background] Returned skill content for: ${skill.name} (${skill.content.length} chars)`);
+            if (skill.run && uploadedStore) {
+              // Phase 2: executable skill — run the script in a sandboxed worker
+              // instead of returning instructional content.
+              const stored = await uploadedStore.readScript(skill.name, skill.run);
+              if (!stored) {
+                result = {
+                  content: [{ type: 'text', text: `Script "${skill.run}" for skill "${skill.name}" not found in storage` }],
+                  isError: true,
+                };
+              } else {
+                const exec = await executeScript({
+                  language: stored.language,
+                  code: stored.blob,
+                  args,
+                });
+                result = exec.ok
+                  ? { content: [{ type: 'text', text: typeof exec.result === 'string' ? exec.result : JSON.stringify(exec.result) }] }
+                  : { content: [{ type: 'text', text: `Script error: ${exec.error}` }], isError: true };
+                logger.debug(`[Background] Ran script for ${skill.name}: ${exec.ok ? 'ok' : 'error'}`);
+              }
+            } else {
+              result = {
+                content: [{ type: 'text', text: skill.content }],
+              };
+              logger.debug(`[Background] Returned skill content for: ${skill.name} (${skill.content.length} chars)`);
+            }
           } else {
             result = {
               content: [{ type: 'text', text: `Skill tool "${toolName}" not found. Available skills: ${skills.map(s => s.name).join(', ')}` }],
