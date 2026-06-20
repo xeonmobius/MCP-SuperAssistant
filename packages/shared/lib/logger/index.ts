@@ -1,5 +1,5 @@
 /**
- * Centralized logging system for MCP SuperAssistant
+ * Centralized logging system for SuperAssistant
  *
  * Features:
  * - Granular log level control (DEBUG, INFO, WARN, ERROR, NONE)

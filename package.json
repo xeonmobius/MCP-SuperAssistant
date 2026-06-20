@@ -1,7 +1,7 @@
 {
   "name": "mcp-superassistant",
   "version": "0.6.0",
-  "description": "MCP SuperAssistant",
+  "description": "SuperAssistant",
   "license": "MIT",
   "private": true,
   "sideEffects": false,

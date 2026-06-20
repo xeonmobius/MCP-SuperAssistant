@@ -1,7 +1,7 @@
 /**
  * Adapter Plugins Export Module
  * 
- * This file exports all available adapter plugins for the MCP-SuperAssistant.
+ * This file exports all available adapter plugins for the SuperAssistant.
  */
 
 export { BaseAdapterPlugin } from './base.adapter';

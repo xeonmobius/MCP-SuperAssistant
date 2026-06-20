@@ -441,7 +441,7 @@ export class BuiltinPlugin implements ITransportPlugin {
     version: '0.1.0',
     transportType: 'builtin',
     description: 'In-extension MCP server (browser tools, no binary/port/Node)',
-    author: 'MCP SuperAssistant',
+    author: 'SuperAssistant',
   };
 
   private server: ReturnType<typeof createBuiltinServer> | null = null;

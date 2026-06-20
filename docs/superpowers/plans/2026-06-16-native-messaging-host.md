@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let MCP SuperAssistant run with full local read/write/shell capability on a machine with **no Node.js, no open port, and no remote host** — via a self-contained native-messaging host binary launched by the browser.
+**Goal:** Let SuperAssistant run with full local read/write/shell capability on a machine with **no Node.js, no open port, and no remote host** — via a self-contained native-messaging host binary launched by the browser.
 
 **Architecture:** A new `mcp-host` workspace compiles to one self-contained binary (Bun `--compile`). The extension gains a `'native'` transport: a `NativeMessagingTransport` MCP `Transport` backed by `chrome.runtime.connectNative`. The browser spawns the host on demand over stdin/stdout; the host implements the `filesystem` + `desktop-commander` MCP servers internally (no `npx`). Existing SSE/WS/StreamableHTTP plugins stay untouched.
 
@@ -940,8 +940,8 @@ Expected: success (no output). Verify: `codesign -dv dist/mcp-host` shows `Signa
 
 ```json
 {
-  "name": "com.mcpsuperassistant.host",
-  "description": "MCP SuperAssistant local host",
+  "name": "com.superassistant.host",
+  "description": "SuperAssistant local host",
   "path": "/Users/CHANGE_ME/bin/mcp-host",
   "type": "stdio",
   "allowed_extensions": ["CHANGE_ME@extension-id"]
@@ -950,7 +950,7 @@ Expected: success (no output). Verify: `codesign -dv dist/mcp-host` shows `Signa
 
 - [ ] **Step 5: Write `mcp-host/README.md` (build + install + first-run)**
 
-Cover: prerequisites (Bun on a dev mac), `bun install`, `bun run build:binary`, `codesign -s -`, where to copy the binary, where to put the manifest (`~/Library/Application Support/Mozilla/NativeMessagingHosts/com.mcpsuperassistant.host.json` for Firefox; `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/` for Chrome), finding the extension ID (`about:debugging` → the extension), the one-time `xattr -d com.apple.quarantine` command, and `HOST_CONFIG` env to point at `host-config.json`.
+Cover: prerequisites (Bun on a dev mac), `bun install`, `bun run build:binary`, `codesign -s -`, where to copy the binary, where to put the manifest (`~/Library/Application Support/Mozilla/NativeMessagingHosts/com.superassistant.host.json` for Firefox; `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/` for Chrome), finding the extension ID (`about:debugging` → the extension), the one-time `xattr -d com.apple.quarantine` command, and `HOST_CONFIG` env to point at `host-config.json`.
 
 - [ ] **Step 6: Commit**
 
@@ -981,7 +981,7 @@ import { NativeMessagingTransport } from './NativeMessagingTransport';
 function makePortMock() {
   const listeners: Record<string, ((...a: any[]) => void)[]> = {};
   const port = {
-    name: 'com.mcpsuperassistant.host',
+    name: 'com.superassistant.host',
     postMessage: vi.fn((msg: any) => {
       // echo back as if the host handled it
       setTimeout(() => listeners['onMessage']?.forEach((l) => l({ echo: msg })), 0);
@@ -1028,7 +1028,7 @@ describe('NativeMessagingTransport', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd MCP-SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingTransport.test.ts`
+Run: `cd SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingTransport.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement**
@@ -1090,7 +1090,7 @@ export class NativeMessagingTransport implements Transport {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd MCP-SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingTransport.test.ts`
+Run: `cd SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingTransport.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
@@ -1121,7 +1121,7 @@ describe('NativeMessagingPlugin', () => {
     (globalThis as any).chrome = {
       runtime: {
         connectNative: vi.fn(() => ({
-          name: 'com.mcpsuperassistant.host',
+          name: 'com.superassistant.host',
           postMessage: vi.fn(),
           disconnect: vi.fn(),
           onMessage: { addListener: vi.fn() },
@@ -1138,16 +1138,16 @@ describe('NativeMessagingPlugin', () => {
 
   it('isSupported returns true for native:// uris', () => {
     const p = new NativeMessagingPlugin();
-    expect(p.isSupported('native://com.mcpsuperassistant.host')).toBe(true);
+    expect(p.isSupported('native://com.superassistant.host')).toBe(true);
     expect(p.isSupported('http://localhost:3006/sse')).toBe(false);
   });
 
   it('connect opens connectNative and returns a transport', async () => {
     const p = new NativeMessagingPlugin();
     await p.initialize({});
-    const transport = await p.connect('native://com.mcpsuperassistant.host');
+    const transport = await p.connect('native://com.superassistant.host');
     expect((globalThis as any).chrome.runtime.connectNative)
-      .toHaveBeenCalledWith('com.mcpsuperassistant.host');
+      .toHaveBeenCalledWith('com.superassistant.host');
     expect(transport).toBeDefined();
   });
 
@@ -1155,14 +1155,14 @@ describe('NativeMessagingPlugin', () => {
     (globalThis as any).chrome = {}; // no connectNative
     const p = new NativeMessagingPlugin();
     await p.initialize({});
-    await expect(p.connect('native://com.mcpsuperassistant.host')).rejects.toThrow(/nativeMessaging|connectNative/);
+    await expect(p.connect('native://com.superassistant.host')).rejects.toThrow(/nativeMessaging|connectNative/);
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd MCP-SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingPlugin.test.ts`
+Run: `cd SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingPlugin.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement**
@@ -1177,7 +1177,7 @@ import { createLogger } from '@extension/shared/lib/logger';
 import { NativeMessagingTransport } from './NativeMessagingTransport';
 
 const logger = createLogger('NativeMessagingPlugin');
-const HOST_NAME = 'com.mcpsuperassistant.host';
+const HOST_NAME = 'com.superassistant.host';
 
 export class NativeMessagingPlugin implements ITransportPlugin {
   readonly metadata: PluginMetadata = {
@@ -1185,7 +1185,7 @@ export class NativeMessagingPlugin implements ITransportPlugin {
     version: '1.0.0',
     transportType: 'native',
     description: 'Local MCP server over browser Native Messaging (no port, no Node)',
-    author: 'MCP SuperAssistant',
+    author: 'SuperAssistant',
   };
 
   private transport: Transport | null = null;
@@ -1248,7 +1248,7 @@ export class NativeMessagingPlugin implements ITransportPlugin {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd MCP-SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingPlugin.test.ts`
+Run: `cd SuperAssistant && pnpm vitest run chrome-extension/src/mcpclient/plugins/native/NativeMessagingPlugin.test.ts`
 Expected: PASS (4 tests).
 
 - [ ] **Step 5: Commit**
@@ -1302,7 +1302,7 @@ Extend `ClientConfig.plugins` and `DEFAULT_CLIENT_CONFIG.plugins`:
 and in `DEFAULT_CLIENT_CONFIG.plugins` add:
 ```ts
     native: {
-      hostName: 'com.mcpsuperassistant.host',
+      hostName: 'com.superassistant.host',
     },
 ```
 
@@ -1344,14 +1344,14 @@ In `chrome-extension/src/background/index.ts`, wherever the default URL is chose
 
 ```ts
 const defaultUrl =
-  connectionType === 'native' ? 'native://com.mcpsuperassistant.host'
+  connectionType === 'native' ? 'native://com.superassistant.host'
   : connectionType === 'websocket' ? DEFAULT_WEBSOCKET_URL
   : connectionType === 'streamable-http' ? DEFAULT_STREAMABLE_HTTP_URL
   : DEFAULT_SSE_URL;
 ```
 Also add near the other default constants (~line 48–50):
 ```ts
-const DEFAULT_NATIVE_URI = 'native://com.mcpsuperassistant.host';
+const DEFAULT_NATIVE_URI = 'native://com.superassistant.host';
 ```
 (Use it in both branches that build the default URL.)
 
@@ -1373,10 +1373,10 @@ In `chrome-extension/manifest.ts` line 53:
 
 - [ ] **Step 8: Type-check + build**
 
-Run: `cd MCP-SuperAssistant && pnpm type-check`
+Run: `cd SuperAssistant && pnpm type-check`
 Expected: no errors (the closed `TransportType` union is the main risk — the grep in planning found every reference; if any file errors, add the missing branch).
 
-Run: `cd MCP-SuperAssistant && pnpm build`
+Run: `cd SuperAssistant && pnpm build`
 Expected: build succeeds; `dist/manifest.json` now lists `nativeMessaging`.
 
 - [ ] **Step 9: Commit**
@@ -1415,11 +1415,11 @@ Find the URI placeholder / npx hint block (around lines 808–842). For native, 
                       ? /* existing SSE hint */
                       : /* existing WS / streamable branches */}
 ```
-Set the URI input to read-only/disabled when `connectionType === 'native'` (the URI is the fixed sentinel) and show `native://com.mcpsuperassistant.host`.
+Set the URI input to read-only/disabled when `connectionType === 'native'` (the URI is the fixed sentinel) and show `native://com.superassistant.host`.
 
 - [ ] **Step 3: Build + load**
 
-Run: `cd MCP-SuperAssistant && pnpm build`
+Run: `cd SuperAssistant && pnpm build`
 Load `dist/` in Firefox via `about:debugging` → Load Temporary Add-on → `dist/manifest.json`.
 
 - [ ] **Step 4: End-to-end smoke test**

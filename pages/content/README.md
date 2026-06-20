@@ -1,6 +1,6 @@
 # Content Scripts
 
-This directory contains the content scripts and core functionality for the MCP SuperAssistant Chrome extension.
+This directory contains the content scripts and core functionality for the SuperAssistant Chrome extension.
 
 ## Overview
 

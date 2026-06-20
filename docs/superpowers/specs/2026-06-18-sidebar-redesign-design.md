@@ -1,7 +1,7 @@
 # Sidebar Redesign — Visual + IA Overhaul (Direction B: "Arc / Friendly")
 
 ## Problem
-The MCP-SuperAssistant sidebar UI is **dated, cluttered, and confusing**, with **no motion/feedback**. The code behind it is oversized and hard to maintain: `Sidebar.tsx` (960 LOC) and `ServerStatus.tsx` (1103 LOC) each do too much; six panels stack vertically in a 320px rail, producing poor hierarchy and endless scroll.
+The SuperAssistant sidebar UI is **dated, cluttered, and confusing**, with **no motion/feedback**. The code behind it is oversized and hard to maintain: `Sidebar.tsx` (960 LOC) and `ServerStatus.tsx` (1103 LOC) each do too much; six panels stack vertically in a 320px rail, producing poor hierarchy and endless scroll.
 
 Goal: a complete visual + information-architecture redesign of the **sidebar** that keeps every feature, collapses the giant files into focused components, and adds the motion/feedback layer the UI currently lacks. Driven by three tools: **Impeccable** (design), **Ponytail** (minimalism — write less, use stdlib/native first), and **motion via CSS** (not Remotion — that was a misnomer; Remotion is for video, irrelevant here).
 

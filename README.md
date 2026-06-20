@@ -1,7 +1,7 @@
 
 <div align="center">
-   <!-- <img src="chrome-extension/public/icon-34.png" alt="MCP SuperAssistant Logo" width="100" height="100"> -->
-   <h1>MCP SuperAssistant Chrome Extension</h1>
+   <!-- <img src="chrome-extension/public/icon-34.png" alt="SuperAssistant Logo" width="100" height="100"> -->
+   <h1>SuperAssistant Chrome Extension</h1>
 </div>
 
 <p align="center">
@@ -9,18 +9,18 @@ Brings MCP to ChatGPT, Perplexity, Grok, Gemini, Google AI Studio, OpenRouter, K
 </p>
 
 <p align="center">
-   <a href="https://mcpsuperassistant.ai/" target="_blank"><strong>🌐 Visit Official Website</strong></a>
+   <a href="https://superassistant.ai/" target="_blank"><strong>🌐 Visit Official Website</strong></a>
 </p>
 
-<!-- ![MCP SuperAssistant](chrome-extension/public/Cover3.jpg) -->
+<!-- ![SuperAssistant](chrome-extension/public/Cover3.jpg) -->
 <div align="center">
- <img src="chrome-extension/public/Cover5.jpg" alt="MCP SuperAssistant Cover" width="800">
+ <img src="chrome-extension/public/Cover5.jpg" alt="SuperAssistant Cover" width="800">
 </div>
 
 <div align="center">
    
-   ![Latest Release](https://img.shields.io/github/v/release/srbhptl39/MCP-SuperAssistant?style=flat-square&label=Latest%20Release&color=brightgreen)
-   ![GitHub Stars](https://img.shields.io/github/stars/srbhptl39/MCP-SuperAssistant?style=flat-square&label=Stars)
+   ![Latest Release](https://img.shields.io/github/v/release/srbhptl39/SuperAssistant?style=flat-square&label=Latest%20Release&color=brightgreen)
+   ![GitHub Stars](https://img.shields.io/github/stars/srbhptl39/SuperAssistant?style=flat-square&label=Stars)
    ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
    ![Chrome Users](https://img.shields.io/chrome-web-store/users/kngiafgkdnlkgmefdafaibkibegkcaef?style=flat-square&label=Chrome%20Users)
    ![Firefox Users](https://img.shields.io/amo/users/mcp-superassistant?style=flat-square&label=Firefox%20Users)
@@ -39,7 +39,7 @@ Brings MCP to ChatGPT, Perplexity, Grok, Gemini, Google AI Studio, OpenRouter, K
 
 ## Overview
 
-MCP SuperAssistant is a Chrome extension that integrates the Model Context Protocol (MCP) tools with AI platforms like Perplexity, ChatGPT, Google Gemini, Google AI Studio, Grokand more. It allows users to execute MCP tools directly from these platforms enhancing the capabilities of web-based AI assistants.
+SuperAssistant is a Chrome extension that integrates the Model Context Protocol (MCP) tools with AI platforms like Perplexity, ChatGPT, Google Gemini, Google AI Studio, Grokand more. It allows users to execute MCP tools directly from these platforms enhancing the capabilities of web-based AI assistants.
 
 ## Currently Supported Platforms
 
@@ -62,21 +62,21 @@ MCP SuperAssistant is a Chrome extension that integrates the Model Context Proto
 
 Kimi.com
 
-[![MCP SuperAssistant Demo](https://img.youtube.com/vi/jnBPh2jzunM/0.jpg)](https://www.youtube.com/watch?v=jnBPh2jzunM)
+[![SuperAssistant Demo](https://img.youtube.com/vi/jnBPh2jzunM/0.jpg)](https://www.youtube.com/watch?v=jnBPh2jzunM)
 
 ChatGPT
 
-[![MCP SuperAssistant Demo](https://img.youtube.com/vi/PY0SKjtmy4E/0.jpg)](https://www.youtube.com/watch?v=PY0SKjtmy4E)
+[![SuperAssistant Demo](https://img.youtube.com/vi/PY0SKjtmy4E/0.jpg)](https://www.youtube.com/watch?v=PY0SKjtmy4E)
 
-Watch the demo to see MCP SuperAssistant in action!
+Watch the demo to see SuperAssistant in action!
 
-[MCP SuperAssistant Demo Playlist](https://www.youtube.com/playlist?list=PLOK1DBnkeaJFzxC4M-z7TU7_j04SShX_w)
+[SuperAssistant Demo Playlist](https://www.youtube.com/playlist?list=PLOK1DBnkeaJFzxC4M-z7TU7_j04SShX_w)
 
 ## Setup Tutorial
 
 [![Setup Tutorial](https://img.youtube.com/vi/h9f_GX1Ef20/0.jpg)](https://www.youtube.com/watch?v=h9f_GX1Ef20&pp=ygUTbWNwIHN1cGVyIGFzc2lzdGFudA%3D%3D)
 
-**New to MCP SuperAssistant?** Watch this complete setup guide to get started in minutes!
+**New to SuperAssistant?** Watch this complete setup guide to get started in minutes!
 
 [View Setup Tutorial](https://www.youtube.com/watch?v=h9f_GX1Ef20&pp=ygUTbWNwIHN1cGVyIGFzc2lzdGFudA%3D%3D)
 
@@ -112,7 +112,7 @@ flowchart TD
 
 To connect the Chrome extension to a local server for proxying connections:
 
-#### Run MCP SuperAssistant Proxy via npx:
+#### Run SuperAssistant Proxy via npx:
 
 1. Create a `config.json` file with your MCP server details. For example, to use the [Desktop Commander](https://github.com/wonderwhy-er/DesktopCommanderMCP):
 
@@ -140,7 +140,7 @@ To connect the Chrome extension to a local server for proxying connections:
    Windows: %APPDATA%\Claude\claude_desktop_config.json
    ```
 
-2. Start the MCP SuperAssistant Proxy server using one of the following commands:
+2. Start the SuperAssistant Proxy server using one of the following commands:
 
    ```bash
    npx -y @srbhptl39/mcp-superassistant-proxy@latest --config ./config.json --outputTransport sse
@@ -167,7 +167,7 @@ To connect the Chrome extension to a local server for proxying connections:
 #### Connection Steps:
 
 1. Start the proxy server using one of the commands above
-2. Open the MCP SuperAssistant sidebar in one of the supported AI platforms, this should show the sidebar UI
+2. Open the SuperAssistant sidebar in one of the supported AI platforms, this should show the sidebar UI
 3. Click on the server status indicator (usually showing as "Disconnected")
 4. Enter the local server URL (default: `http://localhost:3006/sse`)
    URL format depends on the --outputTransport method used:
@@ -182,10 +182,10 @@ To connect the Chrome extension to a local server for proxying connections:
 ## Usage
 Example Workflow:
 1. Navigate to a supported AI platform example chatgpt.
-2. The MCP SuperAssistant sidebar will appear on the right side of the page
+2. The SuperAssistant sidebar will appear on the right side of the page
 3. Configure your MCP Tools to enable and disable the tools you want to use.
 4. In the message prompt area, hover the 'MCP' button to see the available tools and their descriptions.
-5. MCP SuperAssistant requires to add an MCP working instructions prompt to the chat, to give details of its new capabilities and how to use the tools. Use the 'Insert' or attach button to add the instructions prompt.
+5. SuperAssistant requires to add an MCP working instructions prompt to the chat, to give details of its new capabilities and how to use the tools. Use the 'Insert' or attach button to add the instructions prompt.
 6. Once the instructions prompt is added, Now you can ask it to read files or any related MCP tool operations.
 7. When AI wants to use any tool it will show a custom tool call card with the tool name and parameters.
 8. User can manually execute the tool call by clicking on the "RUN" button on the tool call card, or if Auto-Execute mode is enabled, it will execute automatically.
@@ -194,7 +194,7 @@ Example Workflow:
 
 ## Skills (Virtual Tools)
 
-MCP SuperAssistant can load **skills** from your local filesystem and expose them as virtual MCP tools. Skills are markdown files (`SKILL.md`) with YAML frontmatter that contain instructions the AI can reference on-demand.
+SuperAssistant can load **skills** from your local filesystem and expose them as virtual MCP tools. Skills are markdown files (`SKILL.md`) with YAML frontmatter that contain instructions the AI can reference on-demand.
 
 ### How it works
 
@@ -261,16 +261,16 @@ Full skill instructions in markdown...
 
 ## Tips & Tricks
 
-1. **Turn off search mode** (chatgpt, perplexity) in AI chat interfaces for better tool call prompt experience and to prevent MCP SuperAssistant from getting derail.
+1. **Turn off search mode** (chatgpt, perplexity) in AI chat interfaces for better tool call prompt experience and to prevent SuperAssistant from getting derail.
 2. **Turn on Reasoning mode** (chatgpt, perplexity, grok) in AI chat interfaces, which will help the AI to understand the context better and generate the correct tool calls.
 3. Use newer high-end models as they are better at understanding the context and generating the correct tool calls.
 4. Copy the MCP instructions prompt and paste it in the AI chat system prompt (Google AI Studio).
 5. Mention the specific tools you want to use in your conversation.
 6. Use the MCP Auto toggles to control the tool execution.
 
-## Common Issues with MCP SuperAssistant
+## Common Issues with SuperAssistant
 
-This page covers the most common issues users encounter with MCP SuperAssistant and provides solutions to resolve them.
+This page covers the most common issues users encounter with SuperAssistant and provides solutions to resolve them.
 
 ### 1. Extension Not Detecting Tool Calls
 
@@ -298,9 +298,9 @@ This page covers the most common issues users encounter with MCP SuperAssistant 
 
 - There are times model does not generate correct tool call format as requested, this makes the tool detection to fail.
 In such cases, use better models which are meant for tool calling or have better tool calling capabilities.
-- Use the custom instructions prompt, which can be found in the MCP SuperAssistant sidebar.
+- Use the custom instructions prompt, which can be found in the SuperAssistant sidebar.
 - Ask explicitily to use the tools by mentioning them in the prompt.
-- This Below is an example of correct MCP function call format, which is rendered by MCP SuperAssistant extension:
+- This Below is an example of correct MCP function call format, which is rendered by SuperAssistant extension:
 
 ```
 ```jsonl
@@ -315,7 +315,7 @@ In such cases, use better models which are meant for tool calling or have better
 ### Manual Installation (Development)
 
 #### Release Version
-1. Download the latest release from [Releases](https://github.com/srbhptl39/MCP-SuperAssistant/releases)
+1. Download the latest release from [Releases](https://github.com/srbhptl39/SuperAssistant/releases)
 2. Unzip the downloaded file
 3. Navigate to `chrome://extensions/` in Chrome
 4. Enable "Developer mode"
@@ -391,4 +391,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=srbhptl39/MCP-SuperAssistant&type=Date)](https://www.star-history.com/#srbhptl39/MCP-SuperAssistant&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=srbhptl39/SuperAssistant&type=Date)](https://www.star-history.com/#srbhptl39/SuperAssistant&Date)

@@ -1,7 +1,7 @@
 # Native Messaging Host — Serverless Local MCP Transport
 
 ## Problem
-MCP SuperAssistant currently requires a local Node proxy (`npx mcp-superassistant-proxy`) listening on `localhost:3006` to reach stdio MCP servers (`filesystem`, `desktop-commander`). This fails on a restrictive company laptop where:
+SuperAssistant currently requires a local Node proxy (`npx mcp-superassistant-proxy`) listening on `localhost:3006` to reach stdio MCP servers (`filesystem`, `desktop-commander`). This fails on a restrictive company laptop where:
 - Node.js / `npx` cannot be installed
 - No remote host is permitted (all execution must be local)
 - A listening localhost port is undesirable/blocked
@@ -26,7 +26,7 @@ Replace the `npx`-launched proxy + stdio MCP servers with **one self-contained b
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ MCP SuperAssistant extension (background / SW)            │
+│ SuperAssistant extension (background / SW)            │
 │  • existing SSE / WS / StreamableHTTP plugins (untouched) │
 │  • NEW: NativeMessagingTransport plugin                    │
 │       ↕ chrome.runtime.connectNative (stdio JSON pipe)    │
@@ -62,13 +62,13 @@ Replace the `npx`-launched proxy + stdio MCP servers with **one self-contained b
 - Bundled deps: only `@modelcontextprotocol/sdk` (server side) for types/handlers, plus Bun built-ins. No `npx` ever.
 
 ### 2. Native-messaging host manifest (NEW, distribution artifact)
-- Firefox macOS path: `~/Library/Application Support/Mozilla/NativeMessagingHosts/com.mcpsuperassistant.host.json`
-- Chrome macOS path: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.mcpsuperassistant.host.json`
+- Firefox macOS path: `~/Library/Application Support/Mozilla/NativeMessagingHosts/com.superassistant.host.json`
+- Chrome macOS path: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.superassistant.host.json`
 - Shape:
   ```json
   {
-    "name": "com.mcpsuperassistant.host",
-    "description": "MCP SuperAssistant local host",
+    "name": "com.superassistant.host",
+    "description": "SuperAssistant local host",
     "path": "/Users/<user>/bin/mcp-host",
     "type": "stdio",
     "allowed_extensions": ["<extension-id>"]
@@ -79,7 +79,7 @@ Replace the `npx`-launched proxy + stdio MCP servers with **one self-contained b
 ### 3. `NativeMessagingTransport` plugin (NEW)
 - Path: `chrome-extension/src/mcpclient/plugins/native/NativeMessagingPlugin.ts`
 - Implements `ITransportPlugin` (sibling to `SSEPlugin.ts`).
-- `connect()`: `chrome.runtime.connectNative('com.mcpsuperassistant.host')` → long-lived `Port`. Maps the MCP SDK `Transport` interface onto the port: `send` writes a framed message; `onmessage` parses inbound frames.
+- `connect()`: `chrome.runtime.connectNative('com.superassistant.host')` → long-lived `Port`. Maps the MCP SDK `Transport` interface onto the port: `send` writes a framed message; `onmessage` parses inbound frames.
 - `isSupported()`: returns `true` always (it's local); selection is by user choosing "Native" in settings, mirroring how SSE/WS are chosen today.
 - Error handling mirrors `SSEPlugin` enhanced-error pattern: distinguish "host binary missing", "manifest not registered", "extension not in allowed_extensions".
 - Registers in `chrome-extension/src/mcpclient/core/PluginRegistry.ts`.
@@ -93,7 +93,7 @@ Example: AI calls `read_file`.
 1. AI emits MCP tool call in the chat page (content script).
 2. Content script → `chrome.runtime.sendMessage` → background service worker.
 3. `McpClient` selects `NativeMessagingTransport` (user-configured transport).
-4. Plugin: `port = chrome.runtime.connectNative('com.mcpsuperassistant.host')`.
+4. Plugin: `port = chrome.runtime.connectNative('com.superassistant.host')`.
 5. Plugin writes JSON-RPC: `{"method":"tools/call","params":{"name":"read_file", ...}}`, framed `[len][json]`.
 6. `mcp-host` reads frame → routes to filesystem handler → `Bun.file(path).text()` → builds JSON-RPC result.
 7. Host writes `[len][result]` to stdout → `port.onMessage` in the SW.
@@ -131,7 +131,7 @@ codesign -s - mcp-host
 
 Distribute to the locked laptop (copy two files, once):
 1. `mcp-host` → a writable path, e.g. `~/bin/mcp-host`.
-2. `com.mcpsuperassistant.host.json` → the `NativeMessagingHosts/` dir for each browser used.
+2. `com.superassistant.host.json` → the `NativeMessagingHosts/` dir for each browser used.
 3. First-run (if Gatekeeper bites): `xattr -d com.apple.quarantine ~/bin/mcp-host`.
 
 ## Risks

@@ -225,7 +225,7 @@ const renderSystemMessageBox = (block: HTMLElement, content: string): void => {
     const config: ExpandableConfig = {
       blockId,
       className: 'system-message-container',
-      headerText: 'MCP SuperAssistant',
+      headerText: 'SuperAssistant',
       expandTitle: 'Expand system message',
       collapseTitle: 'Collapse system message',
     };
@@ -381,7 +381,7 @@ export const renderFunctionResult = (block: HTMLElement, isProcessingRef: { curr
     // let content = block.textContent || '';
     let content = block.textContent || '';
 
-    // Check if it contains MCP SuperAssistant system message tags
+    // Check if it contains SuperAssistant system message tags
     if (content.includes('<SYSTEM>') || content.includes('</SYSTEM>') || content.includes('<system>') || content.includes('</system>')) {
       // Extract ONLY the text between the tags (previously this assigned the
       // entire block text, so any block containing a stray system tag was fully

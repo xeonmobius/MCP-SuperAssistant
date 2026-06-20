@@ -1,7 +1,7 @@
 # Builtin Browser Server — Serverless In-Extension MCP (Browser-Only Mode)
 
 ## Problem
-On a locked company laptop the user **can install the extension but cannot run any local binary** (EDR/Gatekeeper policy), has **no Node.js**, and **no remote host** is permitted. The native-messaging host (spec `2026-06-16-native-messaging-host-design.md`) is therefore unusable there. The user still wants MCP SuperAssistant to provide AI-tool augmentation on that machine, and to carry their **skills (Level 1/2/3 progressive disclosure)** with them.
+On a locked company laptop the user **can install the extension but cannot run any local binary** (EDR/Gatekeeper policy), has **no Node.js**, and **no remote host** is permitted. The native-messaging host (spec `2026-06-16-native-messaging-host-design.md`) is therefore unusable there. The user still wants SuperAssistant to provide AI-tool augmentation on that machine, and to carry their **skills (Level 1/2/3 progressive disclosure)** with them.
 
 Goal: an entirely in-browser MCP server — **no binary, no port, no Node, no remote** — exposing browser-native tools and storage-backed skills, selectable as a new transport.
 

@@ -1,5 +1,5 @@
 /**
- * Extract the body of an MCP-SuperAssistant `<system>` message block from a
+ * Extract the body of an SuperAssistant `<system>` message block from a
  * rendered function-result element's text.
  *
  * Matches `<system>` or `<SYSTEM>` (the extension emits/recognizes both).
