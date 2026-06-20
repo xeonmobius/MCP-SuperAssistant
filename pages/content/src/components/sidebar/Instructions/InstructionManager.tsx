@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 // import { generateInstructions } from './instructionGenerator';
 import { generateInstructionsJson } from './instructionGeneratorJson';
 import { useUserPreferences, useToolEnablement } from '../../../hooks';
@@ -123,6 +123,7 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
   const [isEditing, setIsEditing] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
   const [isAttaching, setIsAttaching] = useState(false);
+  const hasAutoInserted = useRef(false);
   const [isCopying, setIsCopying] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [insertSuccess, setInsertSuccess] = useState(false);
@@ -197,6 +198,18 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
     logMessage(`[InstructionManager] Regenerating instructions based on ${enabledTools.length}/${tools.length} enabled tools`);
     setInstructions(currentInstructions);
     instructionsState.setInstructions(currentInstructions);
+
+    // Auto-insert instructions once into the host chat when autoInsert is on
+    // + skills are loaded. Fires after the PULL model populates the skill store.
+    if (preferences.autoInsert && !hasAutoInserted.current && currentInstructions && skillAvailable.length > 0) {
+      hasAutoInserted.current = true;
+      try {
+        adapter.insertTextIntoInput(currentInstructions);
+        logMessage('[InstructionManager] Auto-inserted instructions into chat');
+      } catch (err) {
+        logger.error('Auto-insert failed:', err);
+      }
+    }
 
     return () => {
       logMessage('[InstructionManager] Cleaning up instruction generator effect');
