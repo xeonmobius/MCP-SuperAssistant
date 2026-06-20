@@ -212,14 +212,18 @@ export const UploadedSkillsManager: React.FC = () => {
           if ((e.key === 'Enter' || e.key === ' ') && !busy) inputRef.current?.click();
         }}
         className={cn(
-          'cursor-pointer rounded-card border-2 border-dashed p-3 text-center transition-colors',
+          'cursor-pointer rounded-card border-2 border-dashed p-4 text-center transition-colors',
           dragOver ? 'border-accent-from bg-off-soft' : 'border-line bg-surface hover:bg-ground',
           busy && 'opacity-50',
         )}>
-        <p className="text-[11px] font-medium text-ink">
+        <p className="text-[12px] font-semibold text-ink">
           {busy ? 'Working…' : dragOver ? 'Drop to upload' : 'Drag a skill folder here'}
         </p>
-        <p className="mt-0.5 text-[10px] text-muted">or click to pick a folder</p>
+        <p className="mt-1 text-[10px] text-muted">or click to browse</p>
+        <p className="mt-2 text-[9px] text-off leading-snug">
+          Can't see hidden folders (.agents)?<br />
+          Press ⌘⇧. in Finder to reveal them, then drag here.
+        </p>
       </div>
       <button
         type="button"
