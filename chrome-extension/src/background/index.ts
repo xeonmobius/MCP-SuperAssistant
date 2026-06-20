@@ -21,6 +21,7 @@ import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer
 import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser';
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 import { uploadedStore } from '../skills/uploaded-store';
+import { parseUploadedFolder } from '../skills/uploaded-parser';
 
 // Import message types for type safety
 import type {
@@ -731,10 +732,69 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 
+  if (typeof message.type === 'string' && message.type.startsWith('uploadedSkill:')) {
+    handleUploadedSkillMessage(message, sendResponse);
+    return true; // Keep channel open for async response
+  }
+
   // Fallback – message not handled here
   logger.debug('[Background] Message not handled, ignoring:', message.type || message.command);
   return false;
 });
+
+/**
+ * Uploaded-skill CRUD handler. Routed from the onMessage listener for any
+ * `uploadedSkill:` message type. `message.files`, when present, must be a
+ * `File[]` shape that `parseUploadedFolder` accepts (see Task 6 contract note).
+ */
+async function handleUploadedSkillMessage(
+  message: any,
+  sendResponse: (response: any) => void,
+) {
+  if (message.type === 'uploadedSkill:upload' && message.files && uploadedStore) {
+    try {
+      const parsed = await parseUploadedFolder(message.files as File[]);
+      if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
+      const exists = (await uploadedStore.listUploadedSkills()).some(s => s.name === parsed.skill.name);
+      if (exists) { sendResponse({ ok: false, error: 'name-exists' }); return; }
+      await uploadedStore.saveUploadedSkill(parsed.skill, parsed.references);
+      await refreshUploadedSkillsInCache();
+      sendResponse({ ok: true, name: parsed.skill.name });
+    } catch (err) {
+      sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+    return;
+  }
+
+  if (message.type === 'uploadedSkill:list') {
+    try { sendResponse({ ok: true, skills: uploadedStore ? await uploadedStore.listUploadedSkills() : [] }); }
+    catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
+    return;
+  }
+
+  if (message.type === 'uploadedSkill:delete' && message.name && uploadedStore) {
+    try {
+      await uploadedStore.deleteUploadedSkill(message.name);
+      await refreshUploadedSkillsInCache();
+      sendResponse({ ok: true });
+    } catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
+    return;
+  }
+
+  if (message.type === 'uploadedSkill:replace' && message.files && uploadedStore) {
+    try {
+      const parsed = await parseUploadedFolder(message.files as File[]);
+      if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
+      await uploadedStore.saveUploadedSkill(parsed.skill, parsed.references); // overwrites same-name
+      await refreshUploadedSkillsInCache();
+      sendResponse({ ok: true, name: parsed.skill.name });
+    } catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
+    return;
+  }
+
+  // Unhandled uploadedSkill: subtype (e.g. store undefined in non-chrome runtime).
+  sendResponse({ ok: false, error: 'not-handled' });
+}
 
 /**
  * Enhanced MCP message handler with proper error handling, type safety, and response formatting
