@@ -399,10 +399,17 @@ class McpClient {
       throw new Error('Tool name is required and must be a string');
     }
 
-    // Validate connection status before making the call
-    const connectionStore = useConnectionStore.getState();
-    if (connectionStore.status !== 'connected') {
-      throw new Error(`Not connected to MCP server. Current status: ${connectionStore.status}. Please check your connection.`);
+    // skill_* tools are handled locally by the background (returns skill content
+    // from cachedSkills) — no MCP server connection required. Bypass the
+    // connection-status guard for skill tools so they work without a server.
+    const isSkillTool = toolName.startsWith('skill_');
+
+    // Validate connection status before making the call (skip for skill tools)
+    if (!isSkillTool) {
+      const connectionStore = useConnectionStore.getState();
+      if (connectionStore.status !== 'connected') {
+        throw new Error(`Not connected to MCP server. Current status: ${connectionStore.status}. Please check your connection.`);
+      }
     }
 
     logMessage(`[McpClient] Calling tool: ${toolName} with args: ${JSON.stringify(args)}`);
