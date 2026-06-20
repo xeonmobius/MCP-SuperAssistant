@@ -477,23 +477,12 @@ async function runPeriodicCheck(): Promise<void> {
     broadcastConnectionStatusToContentScripts(isConnected);
   }
 
-  // ENHANCED: If not connected and we're not in the middle of connecting, try to connect
-  // Reset connection attempt count periodically to allow recovery from permanent failure state
+  // Do NOT retry connection in the periodic check. The initial tryConnectToServer
+  // already retries 3 times with backoff. Repeating every 60s indefinitely causes
+  // an infinite retry loop against localhost:3006. The user can manually retry
+  // via the sidebar's ConnectionBadge reconnect button.
   if (!isConnected && !isConnecting) {
-    connectionAttemptCount = 0; // Reset counter for periodic checks
-    logger.debug('Periodic check: MCP server not connected, attempting to connect');
-    const serverUrl = getServerUrl();
-
-    // Reset the client's failure state periodically to prevent permanent disconnection
-    // This is critical to fix the issue where only browser restart would work
-    try {
-      logger.debug('[Background] Resetting MCP client connection state for periodic recovery attempt');
-      resetMcpConnectionStateForRecovery(); // Use recovery reset instead of full reset
-    } catch (error) {
-      logger.warn('[Background] Error resetting MCP client connection state:', error);
-    }
-
-    tryConnectToServer(serverUrl, connectionType).catch(() => {});
+    logger.debug('Periodic check: MCP server not connected (use manual reconnect)');
   }
 }
 
