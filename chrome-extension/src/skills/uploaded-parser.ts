@@ -159,10 +159,17 @@ export async function parseUploadedFiles(entries: FileEntry[]): Promise<ParseRes
 }
 
 export function uploadedSkillToSkill(u: UploadedSkill): Skill {
+  // Append the available reference files to the content so the AI knows what
+  // it can skill_read_asset — mirrors the disk-skill behavior (loader.ts:187).
+  let content = u.content;
+  if (u.references && u.references.length > 0) {
+    content += `\n\n---\n\nAvailable reference files (use \`skill_read_asset\` with \`skill_name="${u.name}"\` to load any of these):\n`;
+    content += u.references.map(r => ` - ${r}`).join('\n');
+  }
   return {
     name: u.name,
     description: u.description,
-    content: u.content,
+    content,
     allowedTools: u.allowedTools,
     run: u.run,
     source: 'uploaded',
