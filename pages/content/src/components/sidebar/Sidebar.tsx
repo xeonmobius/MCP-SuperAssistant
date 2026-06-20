@@ -123,7 +123,9 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
 
   // Always render immediately - use safe defaults for all communication methods
   const serverStatus = connectionStatus || communicationMethods?.serverStatus || 'disconnected';
-  const availableTools = communicationMethods?.availableTools || [];
+  const availableTools = (communicationMethods?.availableTools || []).filter(
+  (t: any) => !t.name?.startsWith('skill_'),
+);
   const sendMessage = communicationMethods?.sendMessage || (async () => 'Communication not available');
   const refreshTools = communicationMethods?.refreshTools || (async () => []);
   const forceReconnect = communicationMethods?.forceReconnect || (async () => false);
