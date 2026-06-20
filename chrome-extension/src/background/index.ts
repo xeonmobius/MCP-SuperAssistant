@@ -926,9 +926,19 @@ async function handleMcpMessage(
                   code: stored.blob,
                   args,
                 });
-                result = exec.ok
-                  ? { content: [{ type: 'text', text: typeof exec.result === 'string' ? exec.result : JSON.stringify(exec.result) }] }
-                  : { content: [{ type: 'text', text: `Script error: ${exec.error}` }], isError: true };
+                if (exec.ok) {
+                  const text = typeof exec.result === 'string' ? exec.result : JSON.stringify(exec.result);
+                  // If the result is HTML, open it rendered in a new tab.
+                  const trimmed = text.trimStart();
+                  if (trimmed.startsWith('<') && (trimmed.includes('<html') || trimmed.includes('<!DOCTYPE') || trimmed.includes('<body'))) {
+                    chrome.tabs.create({ url: 'data:text/html;charset=utf-8,' + encodeURIComponent(text) });
+                    result = { content: [{ type: 'text', text: `[HTML output (${text.length} chars) opened in a new browser tab.]` }] };
+                  } else {
+                    result = { content: [{ type: 'text', text }] };
+                  }
+                } else {
+                  result = { content: [{ type: 'text', text: `Script error: ${exec.error}` }], isError: true };
+                }
                 logger.debug(`[Background] Ran script for ${skill.name}: ${exec.ok ? 'ok' : 'error'}`);
               }
             } else {
