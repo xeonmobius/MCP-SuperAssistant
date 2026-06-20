@@ -37,4 +37,5 @@ export const uploadedSkillsClient = {
   delete: (name: string) => send({ type: 'uploadedSkill:delete', name }),
   replace: async (name: string, files: File[]) => replaceEntries(name, await toEntries(files)),
   replaceEntries,
+  requestSkills: () => send({ type: 'uploadedSkill:request-skills' }) as Promise<{ ok: boolean; tools: any[] }>,
 };

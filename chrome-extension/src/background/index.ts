@@ -774,7 +774,19 @@ async function handleUploadedSkillMessage(
   if (message.type === 'uploadedSkill:list') {
     try { sendResponse({ ok: true, skills: uploadedStore ? await uploadedStore.listUploadedSkills() : [] }); }
     catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
-    return;
+    return true;
+  }
+
+  if (message.type === 'uploadedSkill:request-skills') {
+    // PULL model: content script requests skills on mount (sidebar ready).
+    // Returns skill pseudo-tools from cachedSkills so the content script can
+    // populate its skill store without an MCP server connection.
+    try {
+      const skills = getCachedSkills();
+      const skillTools = skills.length > 0 ? skills.map(s => skillToPseudoTool(s)) : [];
+      sendResponse({ ok: true, tools: skillTools });
+    } catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
+    return true;
   }
 
   if (message.type === 'uploadedSkill:delete' && message.name && uploadedStore) {

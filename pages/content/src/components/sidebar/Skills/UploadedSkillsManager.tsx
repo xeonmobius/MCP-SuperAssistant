@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@src/lib/utils';
 import { uploadedSkillsClient } from '../../../skills/uploadedSkillsClient';
+import { useSkillStore } from '../../../../stores/skill.store';
 import type { FileEntry, UploadedSkill } from '../../../../../../chrome-extension/src/skills/uploaded-parser';
 
 const TEXT_ERR: Record<string, string> = {
@@ -63,6 +64,20 @@ export const UploadedSkillsManager: React.FC = () => {
 
   useEffect(() => {
     refresh();
+    // PULL model: request skills from background so the content-script skill store
+    // (which InstructionManager reads) is populated even without an MCP server.
+    uploadedSkillsClient.requestSkills().then(res => {
+      if (!res?.ok || !res.tools?.length) return;
+      const skillItems = res.tools
+        .filter(t => t.name?.startsWith('skill_'))
+        .map(t => ({
+          name: (t as any)._skillName ?? t.name.replace(/^skill_/, '').replace(/_/g, '-'),
+          description: t.description || '',
+        }));
+      if (skillItems.length > 0) {
+        useSkillStore.getState().setAvailableSkills(skillItems);
+      }
+    });
   }, [refresh]);
 
   // webkitdirectory isn't a React-recognised attribute; set via callback-ref.
