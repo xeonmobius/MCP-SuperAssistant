@@ -123,3 +123,65 @@ describe('parseUploadedFiles ({path, text} shape)', () => {
     expect(res).toEqual({ error: 'no-skill-md' });
   });
 });
+
+describe('parseUploadedFiles - script classification (Phase 2)', () => {
+  const wasmMagic = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]).buffer;
+
+  it('captures the .wasm file matching run: as scriptBlob', async () => {
+    const res = await parseUploadedFiles([
+      { path: 'score/SKILL.md', text: '---\nname: score\ndescription: d\nrun: scripts/score.wasm\n---\nbody' },
+      { path: 'score/scripts/score.wasm', text: '', blob: wasmMagic },
+    ]);
+    if ('error' in res) throw new Error('should not error');
+    const s = res.skills[0];
+    expect(s.skill.run).toBe('scripts/score.wasm');
+    expect(s.scriptBlob).toBeDefined();
+    expect(s.scriptBlob?.path).toBe('scripts/score.wasm');
+    expect(s.scriptBlob?.language).toBe('wasm');
+    expect(s.scriptBlob?.blob).toBe(wasmMagic);
+  });
+
+  it('classifies .py matching run: as a script, not a text reference', async () => {
+    const pyBytes = new TextEncoder().encode('print(1)').buffer;
+    const res = await parseUploadedFiles([
+      { path: 'an/SKILL.md', text: '---\nname: an\ndescription: d\nrun: main.py\n---\nbody' },
+      { path: 'an/main.py', text: '', blob: pyBytes },
+    ]);
+    if ('error' in res) throw new Error('should not error');
+    const s = res.skills[0];
+    expect(s.scriptBlob?.language).toBe('py');
+    expect(s.scriptBlob?.path).toBe('main.py');
+    expect(s.references.has('main.py')).toBe(false);
+  });
+
+  it('drops .wasm/.py files that do not match run (never text references)', async () => {
+    const res = await parseUploadedFiles([
+      { path: 's/SKILL.md', text: '---\nname: s\ndescription: d\n---\nbody' },
+      { path: 's/extra.py', text: '', blob: new ArrayBuffer(4) },
+    ]);
+    if ('error' in res) throw new Error('should not error');
+    expect(res.skills[0].scriptBlob).toBeUndefined();
+    expect(res.skills[0].references.size).toBe(0);
+  });
+
+  it('leaves scriptBlob undefined when run: names a missing file', async () => {
+    const res = await parseUploadedFiles([
+      { path: 's/SKILL.md', text: '---\nname: s\ndescription: d\nrun: scripts/missing.wasm\n---\nbody' },
+    ]);
+    if ('error' in res) throw new Error('should not error');
+    expect(res.skills[0].scriptBlob).toBeUndefined();
+    expect(res.skills[0].skill.run).toBe('scripts/missing.wasm');
+  });
+
+  it('still collects text references alongside a script', async () => {
+    const res = await parseUploadedFiles([
+      { path: 's/SKILL.md', text: '---\nname: s\ndescription: d\nrun: scripts/s.wasm\n---\nbody' },
+      { path: 's/scripts/s.wasm', text: '', blob: wasmMagic },
+      { path: 's/docs/guide.md', text: '# guide' },
+    ]);
+    if ('error' in res) throw new Error('should not error');
+    const s = res.skills[0];
+    expect(s.scriptBlob?.language).toBe('wasm');
+    expect([...s.references.keys()]).toEqual(['docs/guide.md']);
+  });
+});

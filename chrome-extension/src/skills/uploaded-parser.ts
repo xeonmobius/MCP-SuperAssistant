@@ -9,11 +9,21 @@ export interface UploadedSkill {
   sourceDir?: string;
   uploadedAt: number;
   references: string[];
+  run?: string;
+}
+
+export type ScriptLanguage = 'wasm' | 'py';
+
+export interface ScriptBlob {
+  path: string;
+  blob: ArrayBuffer;
+  language: ScriptLanguage;
 }
 
 export interface ParsedFolder {
   skill: UploadedSkill;
   references: Map<string, string>;
+  scriptBlob?: ScriptBlob;
 }
 
 /** One parsed SKILL.md may yield multiple skills (a folder of skill folders). */
@@ -25,10 +35,13 @@ export interface FileEntry {
   // clone, since File objects lose that property across sendMessage.
   path: string;
   text: string;
+  // Present for binary/script files (.wasm, .py). `text` may be empty for those.
+  blob?: ArrayBuffer;
 }
 
 const SKILL_MD_NAME = 'skill.md';
-const TEXT_EXT = /\.(md|markdown|txt|text|json|ya?ml|csv|tsv|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|c|cc|cpp|h|hpp|sh|bash|zsh|ps1|sql|html?|css|scss|less|xml|toml|ini|env)$/i;
+const TEXT_EXT = /\.(md|markdown|txt|text|json|ya?ml|csv|tsv|js|jsx|ts|tsx|mjs|cjs|rb|go|rs|java|c|cc|cpp|h|hpp|sh|bash|zsh|ps1|sql|html?|css|scss|less|xml|toml|ini|env)$/i;
+const SCRIPT_EXT = /\.(wasm|py)$/i;
 
 function baseName(p: string): string {
   const parts = p.split('/');
@@ -72,6 +85,7 @@ async function parseEntries(entries: FileEntry[]): Promise<ParseResult> {
         sourceDir: root || undefined,
         uploadedAt: Date.now(),
         references: [],
+        run: md.run,
       },
       references: new Map(),
     });
@@ -100,11 +114,21 @@ async function parseEntries(entries: FileEntry[]): Promise<ParseResult> {
   const skillMdPaths = new Set(skillMds.map(e => e.path));
   for (const e of entries) {
     if (skillMdPaths.has(e.path)) continue; // skip the SKILL.md files themselves
-    if (!TEXT_EXT.test(baseName(e.path))) continue; // Phase 1: text-only
     const root = ownerRoot(e.path);
     if (root === undefined) continue; // orphan (no enclosing skill) → skip
     const pf = byRoot.get(root)!;
     const rel = root ? e.path.slice(root.length + 1) : e.path;
+
+    // Script files (.wasm/.py): never text references. Only the one matching
+    // the declared `run:` path is captured as the skill's scriptBlob.
+    if (SCRIPT_EXT.test(baseName(e.path))) {
+      if (pf.skill.run && pf.skill.run === rel && e.blob) {
+        const language: ScriptLanguage = /\.wasm$/i.test(baseName(e.path)) ? 'wasm' : 'py';
+        pf.scriptBlob = { path: rel, blob: e.blob, language };
+      }
+      continue;
+    }
+    if (!TEXT_EXT.test(baseName(e.path))) continue; // Phase 1: text-only
     pf.references.set(rel, e.text);
   }
 
@@ -119,7 +143,12 @@ async function parseEntries(entries: FileEntry[]): Promise<ParseResult> {
 export async function parseUploadedFolder(files: File[]): Promise<ParseResult> {
   const entries: FileEntry[] = [];
   for (const f of files) {
-    entries.push({ path: relPath(f), text: await f.text() });
+    const path = relPath(f);
+    if (SCRIPT_EXT.test(baseName(path))) {
+      entries.push({ path, text: '', blob: await f.arrayBuffer() });
+    } else {
+      entries.push({ path, text: await f.text() });
+    }
   }
   return parseEntries(entries);
 }
@@ -135,6 +164,7 @@ export function uploadedSkillToSkill(u: UploadedSkill): Skill {
     description: u.description,
     content: u.content,
     allowedTools: u.allowedTools,
+    run: u.run,
     source: 'uploaded',
     sourceDir: u.sourceDir,
   };

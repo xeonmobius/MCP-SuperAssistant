@@ -88,3 +88,33 @@ describe('skill name <-> tool name round-trip', () => {
     expect(a.name).not.toBe(b.name);
   });
 });
+
+describe('parseSkillMarkdown - run frontmatter (Phase 2)', () => {
+  it('extracts run: pointing at a .wasm script', () => {
+    const raw = '---\nname: scorer\ndescription: d\nrun: scripts/score.wasm\n---\nbody';
+    const skill = parseSkillMarkdown(raw, 'test');
+    expect(skill).not.toBeNull();
+    expect(skill!.run).toBe('scripts/score.wasm');
+  });
+
+  it('extracts run: pointing at a .py script', () => {
+    const raw = '---\nname: analyzer\ndescription: d\nrun: scripts/analyze.py\n---\nbody';
+    const skill = parseSkillMarkdown(raw, 'test');
+    expect(skill).not.toBeNull();
+    expect(skill!.run).toBe('scripts/analyze.py');
+  });
+
+  it('leaves run undefined when frontmatter has no run field', () => {
+    const raw = '---\nname: plain\ndescription: d\n---\nbody';
+    const skill = parseSkillMarkdown(raw, 'test');
+    expect(skill).not.toBeNull();
+    expect(skill!.run).toBeUndefined();
+  });
+
+  it('does not absorb run value into description', () => {
+    const raw = '---\nname: x\ndescription: the desc\nrun: scripts/x.py\n---\nbody';
+    const skill = parseSkillMarkdown(raw, 'test');
+    expect(skill!.description).toBe('the desc');
+    expect(skill!.run).toBe('scripts/x.py');
+  });
+});

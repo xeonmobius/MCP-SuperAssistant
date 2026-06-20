@@ -9,6 +9,7 @@ export interface Skill {
   description: string;
   content: string;
   allowedTools?: string;
+  run?: string;
   source: string;
   sourceDir?: string;
 }
@@ -37,6 +38,7 @@ export function parseSkillMarkdown(raw: string, source: string): Skill | null {
   let name = '';
   let description = '';
   let allowedTools: string | undefined;
+  let run: string | undefined;
   // True while consuming the indented continuation lines of a folded (>) or
   // literal (|) YAML block scalar for `description`.
   let collectingDescription = false;
@@ -44,7 +46,7 @@ export function parseSkillMarkdown(raw: string, source: string): Skill | null {
   for (const line of frontmatter.split('\n')) {
     if (collectingDescription) {
       // A non-indented line ends the block scalar and must be processed normally.
-      if (/^\s+/.test(line) && !line.startsWith('name:') && !line.startsWith('allowed-tools:')) {
+      if (/^\s+/.test(line) && !line.startsWith('name:') && !line.startsWith('allowed-tools:') && !line.startsWith('run:')) {
         const trimmed = line.trim();
         if (trimmed) {
           description = description ? `${description} ${trimmed}` : trimmed;
@@ -67,14 +69,16 @@ export function parseSkillMarkdown(raw: string, source: string): Skill | null {
       description = desc;
     } else if (line.startsWith('allowed-tools:')) {
       allowedTools = line.slice('allowed-tools:'.length).trim();
-    } else if (description && !line.startsWith('name:') && !line.startsWith('allowed-tools:')) {
+    } else if (line.startsWith('run:')) {
+      run = line.slice('run:'.length).trim();
+    } else if (description && !line.startsWith('name:') && !line.startsWith('allowed-tools:') && !line.startsWith('run:')) {
       description += ' ' + line.trim();
     }
   }
 
   if (!name) return null;
 
-  return { name, description, content, allowedTools, source };
+  return { name, description, content, allowedTools, run, source };
 }
 
 /**
