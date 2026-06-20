@@ -195,8 +195,7 @@ ClassName | Custom class | User
 
   // instructions += '\n';
 
-  // Add available tools section ONLY if there are tools
-  if (mcpTools.length > 0) {
+  if (mcpTools.length > 0 || enabledSkills.length > 0) {
   instructions += '## AVAILABLE TOOLS\n\n';
 
   // Add each tool with its schema
@@ -304,9 +303,7 @@ ClassName | Custom class | User
     instructions += `- \`file_path\`: The file path relative to the skill folder, e.g. "examples/demo.md" (string) (required)\n\n`;
   }
 
-  } // end if (mcpTools.length > 0)
-    instructions += `- \`file_path\`: The file path relative to the skill folder, e.g. "examples/demo.md" (string) (required)\n\n`;
-  }
+  } // end if (mcpTools.length > 0 || enabledSkills.length > 0)
 
   if (enabledSkills.length > 0) {
     instructions += '\n## AVAILABLE SKILLS\n\n';
