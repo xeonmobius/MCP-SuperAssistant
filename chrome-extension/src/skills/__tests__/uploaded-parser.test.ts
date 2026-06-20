@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseUploadedFolder } from '../uploaded-parser';
+import { parseUploadedFolder, parseUploadedFiles } from '../uploaded-parser';
 
 const file = (path: string, text: string): File =>
   new File([text], path.split('/').pop() || path, { type: 'text/plain' });
@@ -58,5 +58,24 @@ describe('parseUploadedFolder', () => {
     if ('error' in res) throw new Error('should not error');
     expect(res.references.size).toBe(0);
     expect(res.skill.references).toEqual([]);
+  });
+});
+
+describe('parseUploadedFiles ({path, text} shape)', () => {
+  it('parses SKILL.md and builds references from pre-extracted entries', async () => {
+    const res = await parseUploadedFiles([
+      { path: 'my-skill/SKILL.md', text: SKILL_MD },
+      { path: 'my-skill/examples/demo.md', text: '# demo' },
+      { path: 'my-skill/img/logo.png', text: 'binary' }, // non-text → skipped
+    ]);
+    if ('error' in res) throw new Error('should not error');
+    expect(res.skill.name).toBe('my-skill');
+    expect([...res.references.keys()]).toEqual(['examples/demo.md']);
+    expect(res.references.get('examples/demo.md')).toBe('# demo');
+  });
+
+  it('returns {error: "no-skill-md"} when no path ends in skill.md', async () => {
+    const res = await parseUploadedFiles([{ path: 'foo/README.md', text: '# r' }]);
+    expect(res).toEqual({ error: 'no-skill-md' });
   });
 });
