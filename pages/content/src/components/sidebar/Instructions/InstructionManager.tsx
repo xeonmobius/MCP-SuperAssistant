@@ -199,22 +199,30 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
     setInstructions(currentInstructions);
     instructionsState.setInstructions(currentInstructions);
 
-    // Auto-insert instructions once into the host chat when autoInsert is on
-    // + skills are loaded. Fires after the PULL model populates the skill store.
-    if (preferences.autoInsert && !hasAutoInserted.current && currentInstructions && skillAvailable.length > 0) {
-      hasAutoInserted.current = true;
-      try {
-        adapter.insertTextIntoInput(currentInstructions);
-        logMessage('[InstructionManager] Auto-inserted instructions into chat');
-      } catch (err) {
-        logger.error('Auto-insert failed:', err);
-      }
-    }
-
     return () => {
       logMessage('[InstructionManager] Cleaning up instruction generator effect');
     };
   }, [toolsSignature, enabledToolsSignature, customInstructionsKey, currentInstructions, enabledTools.length, tools.length]);
+
+  // Auto-insert instructions into the host chat ONCE when autoInsert is on
+  // + skills are loaded. Dedicated effect with a delay so the host chat's
+  // input element is ready. Flag set AFTER success so it retries if it fails.
+  useEffect(() => {
+    if (!preferences.autoInsert || hasAutoInserted.current) return;
+    if (skillAvailable.length === 0 || !currentInstructions) return;
+
+    const timer = setTimeout(() => {
+      try {
+        adapter.insertTextIntoInput(currentInstructions);
+        hasAutoInserted.current = true;
+        logMessage('[InstructionManager] Auto-inserted instructions (delayed)');
+      } catch (err) {
+        logger.error('Auto-insert failed (will retry on next dep change):', err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [preferences.autoInsert, skillAvailable.length, currentInstructions]);
 
   // Force instruction regeneration and global sync when enablement changes
   const forceInstructionUpdate = useCallback(() => {
