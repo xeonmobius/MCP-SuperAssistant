@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@src/lib/utils';
 import { uploadedSkillsClient } from '../../../skills/uploadedSkillsClient';
-import { useSkillStore } from '../../../../stores/skill.store';
+import { useSkillStore } from '@src/stores/skill.store';
 import type { FileEntry, UploadedSkill } from '../../../../../../chrome-extension/src/skills/uploaded-parser';
 
 const TEXT_ERR: Record<string, string> = {
