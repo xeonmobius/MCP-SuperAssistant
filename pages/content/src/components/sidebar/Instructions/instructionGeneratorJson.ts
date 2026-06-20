@@ -299,6 +299,15 @@ ClassName | Custom class | User
     }
   });
 
+  // Add skill_read_asset as a real tool in AVAILABLE TOOLS when skills exist
+  if (enabledSkills.length > 0) {
+    instructions += ` - skill_read_asset\n`;
+    instructions += `**Description**: Read a reference file bundled with a skill (examples, docs, code samples). Use this to load only what you need from a skill, keeping context small.\n`;
+    instructions += `**Parameters**:\n`;
+    instructions += `- \`skill_name\`: The name of the skill to read from (string) (required)\n`;
+    instructions += `- \`file_path\`: The file path relative to the skill folder, e.g. "examples/demo.md" (string) (required)\n\n`;
+  }
+
   if (enabledSkills.length > 0) {
     instructions += '\n## AVAILABLE SKILLS\n\n';
     instructions += 'Skills are specialized capabilities you can invoke. Invoke the skill tool to load its full instructions and follow them exactly.\n\n';
