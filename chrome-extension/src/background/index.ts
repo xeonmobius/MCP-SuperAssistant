@@ -268,6 +268,7 @@ async function initializeExtension() {
   // AVAILABLE SKILLS even when no MCP server connects (refreshUploadedSkillsInCache
   // inside tryConnectToServer is skipped if the server is unreachable).
   await refreshUploadedSkillsInCache();
+  await broadcastSkillsAfterUploadChange();
 
   // Initialize Remote Config Manager
   await initializeRemoteConfig();
@@ -780,6 +781,7 @@ async function handleUploadedSkillMessage(
     try {
       await uploadedStore.deleteUploadedSkill(message.name);
       await refreshUploadedSkillsInCache();
+      await broadcastSkillsAfterUploadChange();
       sendResponse({ ok: true });
     } catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
     return;
@@ -815,6 +817,7 @@ async function saveParsedSkills(
     savedNames.push(pf.skill.name);
   }
   await refreshUploadedSkillsInCache();
+  await broadcastSkillsAfterUploadChange();
   return { ok: true, names: savedNames };
 }
 
@@ -1314,6 +1317,28 @@ async function broadcastToolsWithSkills(serverUrl: string): Promise<void> {
   } catch (error) {
     logger.warn('[Background] Failed to re-broadcast tools after skill update:', error);
   }
+}
+
+/**
+ * Broadcast skills to content scripts after an uploaded-skills change (upload/
+ * delete/replace/startup). Tries the full tools+skills broadcast if a server is
+ * configured; falls back to skills-only so uploaded skills appear in AVAILABLE
+ * SKILLS even when no MCP server is connected.
+ */
+async function broadcastSkillsAfterUploadChange(): Promise<void> {
+  const serverUrl = getServerUrl();
+  if (serverUrl) {
+    try {
+      await broadcastToolsWithSkills(serverUrl);
+      return;
+    } catch {
+      // Server unreachable — fall through to skills-only.
+    }
+  }
+  const skills = getCachedSkills();
+  const skillTools = skills.length > 0 ? skills.map(s => skillToPseudoTool(s)) : [];
+  broadcastToolsUpdateToContentScripts(skillTools);
+  logger.debug(`[Background] Broadcast ${skillTools.length} skills (no-server path)`);
 }
 
 /**
