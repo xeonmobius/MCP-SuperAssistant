@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { cn } from '@src/lib/utils';
 import { uploadedSkillsClient } from '../../../skills/uploadedSkillsClient';
-import type { UploadedSkill } from '../../../../../../chrome-extension/src/skills/uploaded-parser';
+import type { FileEntry, UploadedSkill } from '../../../../../../chrome-extension/src/skills/uploaded-parser';
 
 const TEXT_ERR: Record<string, string> = {
   'no-skill-md': 'No SKILL.md found in the folder.',
@@ -9,17 +10,50 @@ const TEXT_ERR: Record<string, string> = {
   'conflicts-with-disk': 'A disk/MCP skill already uses that name. Rename the folder and re-upload.',
 };
 
+// ---- FileSystemEntry walker (drag-and-drop of a FOLDER) ----
+// dataTransfer.files gives only the directory entry for a dropped folder (useless
+// as a File). webkitGetAsEntry + a recursive directory read yields the leaf files
+// with their relative paths — bypasses the native folder picker, which hides
+// dot-prefixed dirs like ~/.agents so the user can't navigate into them.
+const getFile = (entry: FileSystemFileEntry): Promise<File> =>
+  new Promise((resolve, reject) => entry.file(resolve, reject));
+const readBatch = (reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> =>
+  new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+
+const walkEntry = async (entry: FileSystemEntry, prefix: string, out: FileEntry[]): Promise<void> => {
+  const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+  if (entry.isFile) {
+    const file = await getFile(entry as FileSystemFileEntry);
+    out.push({ path, text: await file.text() });
+  } else if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    // readEntries returns in batches; loop until an empty batch.
+    let batch = await readBatch(reader);
+    while (batch.length > 0) {
+      for (const child of batch) await walkEntry(child, path, out);
+      batch = await readBatch(reader);
+    }
+  }
+};
+
+const collectDroppedEntries = async (items: DataTransferItemList): Promise<FileEntry[]> => {
+  const out: FileEntry[] = [];
+  const roots: FileSystemEntry[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry?.();
+    if (entry) roots.push(entry);
+  }
+  for (const root of roots) await walkEntry(root, '', out);
+  return out;
+};
+
 export const UploadedSkillsManager: React.FC = () => {
-  // One ref holds the upload input element; the callback-ref ALSO sets the
-  // non-standard webkitdirectory attribute (React doesn't recognise it as a
-  // JSX prop, and a separate useEffect-based wiring is fragile if the hidden
-  // input ever remounts). Merging "store node" + "set attributes" in one
-  // callback-ref fires reliably on mount in both Chrome and Firefox.
   const inputRef = useRef<HTMLInputElement | null>(null);
   const replaceRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [skills, setSkills] = useState<UploadedSkill[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const refresh = useCallback(async () => {
     const res = await uploadedSkillsClient.list();
@@ -30,6 +64,7 @@ export const UploadedSkillsManager: React.FC = () => {
     refresh();
   }, [refresh]);
 
+  // webkitdirectory isn't a React-recognised attribute; set via callback-ref.
   const setUploadInput = useCallback((el: HTMLInputElement | null) => {
     inputRef.current = el;
     if (el) {
@@ -45,9 +80,29 @@ export const UploadedSkillsManager: React.FC = () => {
     [],
   );
 
+  const runUpload = useCallback(
+    async (entries: FileEntry[]) => {
+      if (!entries.length) {
+        setError('No readable files found.');
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await uploadedSkillsClient.uploadEntries(entries);
+        if (!res?.ok) setError(TEXT_ERR[res?.error] || res?.error || 'Upload failed');
+        await refresh();
+      } finally {
+        setBusy(false);
+      }
+    },
+    [refresh],
+  );
+
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    // Reuse the picker path (File[] → entries via the client).
     setBusy(true);
     setError(null);
     try {
@@ -58,6 +113,13 @@ export const UploadedSkillsManager: React.FC = () => {
       setBusy(false);
       e.target.value = '';
     }
+  };
+
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const entries = await collectDroppedEntries(e.dataTransfer.items);
+    await runUpload(entries);
   };
 
   const onReplace = async (name: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,13 +150,29 @@ export const UploadedSkillsManager: React.FC = () => {
   return (
     <div className="p-4 space-y-2">
       <input ref={setUploadInput} type="file" multiple className="hidden" onChange={onUpload} />
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-        className="w-full rounded-pill bg-ink px-3 py-1.5 text-[11px] font-semibold text-surface disabled:opacity-40">
-        + Upload skill folder
-      </button>
+      <div
+        role="button"
+        tabIndex={0}
+        onDragOver={e => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => !busy && inputRef.current?.click()}
+        onKeyDown={e => {
+          if ((e.key === 'Enter' || e.key === ' ') && !busy) inputRef.current?.click();
+        }}
+        className={cn(
+          'cursor-pointer rounded-card border-2 border-dashed p-3 text-center transition-colors',
+          dragOver ? 'border-accent-from bg-off-soft' : 'border-line bg-surface hover:bg-ground',
+          busy && 'opacity-50',
+        )}>
+        <p className="text-[11px] font-medium text-ink">
+          {busy ? 'Working…' : dragOver ? 'Drop to upload' : 'Drag a skill folder here'}
+        </p>
+        <p className="mt-0.5 text-[10px] text-muted">or click to pick a folder</p>
+      </div>
       {error && <p className="text-[10px] text-err">{error}</p>}
       {skills.map(s => (
         <div
