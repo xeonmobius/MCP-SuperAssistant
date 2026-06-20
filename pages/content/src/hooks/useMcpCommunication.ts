@@ -134,9 +134,9 @@ export const useMcpCommunication = () => {
           description: t.description || '',
         }));
         useSkillStore.getState().setAvailableSkills(skillItems);
-      } else {
-        useSkillStore.getState().setAvailableSkills([]);
       }
+      // Don't clear when skillTools is empty — uploaded skills (set by the PULL
+      // model) should persist even when the MCP server has no skills or is down.
 
       toolActions.setAvailableTools(mcpTools);
       logMessage(`[useMcpCommunication] Refreshed ${mcpTools.length} tools, ${skillTools.length} skills`);
