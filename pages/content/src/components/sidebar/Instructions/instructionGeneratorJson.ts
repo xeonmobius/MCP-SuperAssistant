@@ -306,6 +306,11 @@ ClassName | Custom class | User
       instructions += ` - **${skill.name}**: ${skill.description}\n`;
     });
     instructions += '\n';
+    instructions += '### Reading Skill References\n\n';
+    instructions += 'Use `skill_read_asset` to read reference files bundled with a skill (examples, docs, code samples). This keeps context small — only load what you need.\n';
+    instructions += 'Parameters:\n';
+    instructions += ' - `skill_name` (string): The skill name (e.g. "caveman")\n';
+    instructions += ' - `file_path` (string): The file path relative to the skill folder (e.g. "examples/demo.md")\n\n';
   }
 
   //add custom instructions code here
