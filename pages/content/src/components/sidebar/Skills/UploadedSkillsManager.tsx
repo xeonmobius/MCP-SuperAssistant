@@ -5,7 +5,8 @@ import type { UploadedSkill } from '../../../../../../chrome-extension/src/skill
 const TEXT_ERR: Record<string, string> = {
   'no-skill-md': 'No SKILL.md found in the folder.',
   'bad-frontmatter': 'SKILL.md frontmatter is missing or has no name.',
-  'name-exists': 'A skill with that name already exists. Delete it first or use Replace.',
+  'name-exists': 'An uploaded skill with that name already exists. Delete it first or use Replace.',
+  'conflicts-with-disk': 'A disk/MCP skill already uses that name. Rename the folder and re-upload.',
 };
 
 export const UploadedSkillsManager: React.FC = () => {

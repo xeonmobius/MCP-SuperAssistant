@@ -264,6 +264,10 @@ async function initializeExtension() {
 
   // Load persisted skills
   await loadPersistedSkills();
+  // ponytail: load uploaded skills unconditionally at startup so they appear in
+  // AVAILABLE SKILLS even when no MCP server connects (refreshUploadedSkillsInCache
+  // inside tryConnectToServer is skipped if the server is unreachable).
+  await refreshUploadedSkillsInCache();
 
   // Initialize Remote Config Manager
   await initializeRemoteConfig();
@@ -761,6 +765,10 @@ async function handleUploadedSkillMessage(
       if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
       const exists = (await uploadedStore.listUploadedSkills()).some(s => s.name === parsed.skill.name);
       if (exists) { sendResponse({ ok: false, error: 'name-exists' }); return; }
+      // Reject if a disk/MCP skill already owns this name — otherwise the uploaded
+      // copy would be silently shadowed (skills.find returns the first/disk match).
+      const conflictsWithDisk = getCachedSkills().some(s => s.name === parsed.skill.name && s.source !== 'uploaded');
+      if (conflictsWithDisk) { sendResponse({ ok: false, error: 'conflicts-with-disk' }); return; }
       await uploadedStore.saveUploadedSkill(parsed.skill, parsed.references);
       await refreshUploadedSkillsInCache();
       sendResponse({ ok: true, name: parsed.skill.name });
