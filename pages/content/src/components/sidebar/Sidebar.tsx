@@ -5,6 +5,7 @@ import { useUIStore } from '@src/stores/ui.store';
 import ConnectionBadge from './ServerStatus/ConnectionBadge';
 import AvailableTools from './AvailableTools/AvailableTools';
 import AvailableSkills from './AvailableSkills/AvailableSkills';
+import { UploadedSkillsManager } from './Skills/UploadedSkillsManager';
 import MoreDrawer from './MoreDrawer/MoreDrawer';
 import Settings from './Settings/Settings';
 import { useMcpCommunication } from '@src/hooks/useMcpCommunication';
@@ -843,6 +844,7 @@ const Sidebar: React.FC<SidebarProps> = ({ initialPreferences }) => {
                   { hidden: activeTab !== 'availableSkills' },
                 )}>
                 <AvailableSkills />
+                <UploadedSkillsManager />
               </div>
 
               {/* Settings */}
