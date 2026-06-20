@@ -21,7 +21,7 @@ import { getCachedSkills, loadSkillsFromEndpoint, loadSkillsFromFilesystemServer
 import { skillToPseudoTool, encodeSkillName, type Skill } from '../skills/parser';
 import { resolveSkillAssetPath, isPathWithinSkillDir } from '../skills/asset-resolver';
 import { uploadedStore } from '../skills/uploaded-store';
-import { parseUploadedFiles, type FileEntry } from '../skills/uploaded-parser';
+import { parseUploadedFiles, type FileEntry, type ParsedFolder } from '../skills/uploaded-parser';
 
 // Import message types for type safety
 import type {
@@ -763,15 +763,7 @@ async function handleUploadedSkillMessage(
       const entries: FileEntry[] = Array.isArray(message.files) ? message.files : [];
       const parsed = await parseUploadedFiles(entries);
       if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
-      const exists = (await uploadedStore.listUploadedSkills()).some(s => s.name === parsed.skill.name);
-      if (exists) { sendResponse({ ok: false, error: 'name-exists' }); return; }
-      // Reject if a disk/MCP skill already owns this name — otherwise the uploaded
-      // copy would be silently shadowed (skills.find returns the first/disk match).
-      const conflictsWithDisk = getCachedSkills().some(s => s.name === parsed.skill.name && s.source !== 'uploaded');
-      if (conflictsWithDisk) { sendResponse({ ok: false, error: 'conflicts-with-disk' }); return; }
-      await uploadedStore.saveUploadedSkill(parsed.skill, parsed.references);
-      await refreshUploadedSkillsInCache();
-      sendResponse({ ok: true, name: parsed.skill.name });
+      sendResponse(await saveParsedSkills(parsed));
     } catch (err) {
       sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) });
     }
@@ -798,15 +790,32 @@ async function handleUploadedSkillMessage(
       const entries: FileEntry[] = Array.isArray(message.files) ? message.files : [];
       const parsed = await parseUploadedFiles(entries);
       if ('error' in parsed) { sendResponse({ ok: false, error: parsed.error }); return; }
-      await uploadedStore.saveUploadedSkill(parsed.skill, parsed.references); // overwrites same-name
-      await refreshUploadedSkillsInCache();
-      sendResponse({ ok: true, name: parsed.skill.name });
+      if (message.name) await uploadedStore.deleteUploadedSkill(message.name);
+      sendResponse(await saveParsedSkills(parsed, { skipName: message.name }));
     } catch (err) { sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }); }
     return;
   }
 
   // Unhandled uploadedSkill: subtype (e.g. store undefined in non-chrome runtime).
   sendResponse({ ok: false, error: 'not-handled' });
+}
+
+async function saveParsedSkills(
+  parsed: { skills: ParsedFolder[] },
+  opts: { skipName?: string } = {},
+): Promise<{ ok: true; names: string[] } | { ok: false; error: string }> {
+  const existing = (await uploadedStore!.listUploadedSkills()).filter(s => s.name !== opts.skipName);
+  const diskNames = new Set(getCachedSkills().filter(s => s.source !== 'uploaded').map(s => s.name));
+  const savedNames: string[] = [];
+  for (const pf of parsed.skills) {
+    if (existing.some(s => s.name === pf.skill.name)) return { ok: false, error: 'name-exists' };
+    if (diskNames.has(pf.skill.name)) return { ok: false, error: 'conflicts-with-disk' };
+    await uploadedStore!.saveUploadedSkill(pf.skill, pf.references);
+    existing.push(pf.skill);
+    savedNames.push(pf.skill.name);
+  }
+  await refreshUploadedSkillsInCache();
+  return { ok: true, names: savedNames };
 }
 
 /**

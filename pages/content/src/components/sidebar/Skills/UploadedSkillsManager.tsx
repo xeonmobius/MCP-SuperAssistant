@@ -49,6 +49,7 @@ const collectDroppedEntries = async (items: DataTransferItemList): Promise<FileE
 
 export const UploadedSkillsManager: React.FC = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const replaceRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [skills, setSkills] = useState<UploadedSkill[]>([]);
   const [busy, setBusy] = useState(false);
@@ -150,6 +151,7 @@ export const UploadedSkillsManager: React.FC = () => {
   return (
     <div className="p-4 space-y-2">
       <input ref={setUploadInput} type="file" multiple className="hidden" onChange={onUpload} />
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onUpload} />
       <div
         role="button"
         tabIndex={0}
@@ -173,6 +175,13 @@ export const UploadedSkillsManager: React.FC = () => {
         </p>
         <p className="mt-0.5 text-[10px] text-muted">or click to pick a folder</p>
       </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => !busy && fileInputRef.current?.click()}
+        className="w-full text-[10px] text-muted hover:text-ink">
+        …or pick file(s)
+      </button>
       {error && <p className="text-[10px] text-err">{error}</p>}
       {skills.map(s => (
         <div
