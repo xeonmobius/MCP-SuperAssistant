@@ -12,6 +12,15 @@
  *    (JSON-serializable) which is returned. Missing `_result` -> null.
  */
 
+// Module Workers (Vite default) don't have importScripts. Pyodide's bootstrap
+// checks for importScripts to detect Worker context; if missing it throws
+// "Cannot determine runtime environment". Polyfill a stub that throws TypeError
+// so Pyodide's loadScript() catches it and falls back to dynamic import().
+// Works in both Chrome and Firefox module Workers.
+if (typeof (self as any).importScripts !== 'function') {
+  (self as any).importScripts = () => { throw new TypeError('importScripts not available in module worker'); };
+}
+
 type Req = {
   language: 'wasm' | 'py';
   code: ArrayBuffer;
