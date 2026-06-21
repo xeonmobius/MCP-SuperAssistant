@@ -16,6 +16,10 @@ export interface ExecuteOptions {
   timeoutMs?: number;
   /** Override for tests; default creates the bundled module worker. */
   workerFactory?: () => WorkerLike;
+  /** URL to the locally-bundled pyodide.mjs bootstrap (passed to the worker). */
+  pyodideBootstrapUrl?: string;
+  /** CDN indexURL for fetching Pyodide WASM + packages at runtime. */
+  pyodideIndexUrl?: string;
 }
 
 export type ExecuteResult =
@@ -70,7 +74,11 @@ export function executeScript(opts: ExecuteOptions): Promise<ExecuteResult> {
     worker.onerror = (e: { message: string }) =>
       finish({ ok: false, error: e.message || 'Worker error' });
     try {
-      worker.postMessage({ language, code, args });
+      worker.postMessage({
+        language, code, args,
+        pyodideBootstrapUrl: opts.pyodideBootstrapUrl,
+        pyodideIndexUrl: opts.pyodideIndexUrl,
+      });
     } catch (err) {
       finish({ ok: false, error: `Failed to post message: ${err instanceof Error ? err.message : String(err)}` });
     }

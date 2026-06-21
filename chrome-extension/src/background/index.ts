@@ -914,6 +914,7 @@ async function handleMcpMessage(
                   language: stored.language,
                   code: stored.blob,
                   args,
+                  pyodideBootstrapUrl: chrome.runtime.getURL('pyodide.mjs'),
                 });
                 if (exec.ok) {
                   const text = typeof exec.result === 'string' ? exec.result : JSON.stringify(exec.result);

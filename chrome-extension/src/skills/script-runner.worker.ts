@@ -12,7 +12,13 @@
  *    (JSON-serializable) which is returned. Missing `_result` -> null.
  */
 
-type Req = { language: 'wasm' | 'py'; code: ArrayBuffer; args: unknown };
+type Req = {
+  language: 'wasm' | 'py';
+  code: ArrayBuffer;
+  args: unknown;
+  pyodideBootstrapUrl?: string;
+  pyodideIndexUrl?: string;
+};
 type Res = { ok: true; result: unknown } | { ok: false; error: string };
 
 const PYODIDE_INDEX = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
@@ -20,12 +26,14 @@ const PYODIDE_INDEX = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
 // Cached across postMessages within one Worker lifetime.
 let pyodidePromise: Promise<unknown> | undefined;
 
-async function getPyodide(): Promise<any> {
+async function getPyodide(bootstrapUrl?: string): Promise<any> {
   if (!pyodidePromise) {
     pyodidePromise = (async () => {
-      // @vite-ignore keeps Vite from trying to bundle this cross-origin import;
-      // it resolves at runtime against the worker's CSP-allowed script-src.
-      const mod = await import(/* @vite-ignore */ `${PYODIDE_INDEX}pyodide.mjs`);
+      // Use the locally-bundled pyodide.mjs (passed from the SW via
+      // chrome.runtime.getURL) to avoid MV3 CSP blocking CDN script-src.
+      // Falls back to the CDN URL if no local URL is provided.
+      const moduleUrl = bootstrapUrl ?? `${PYODIDE_INDEX}pyodide.mjs`;
+      const mod = await import(/* @vite-ignore */ moduleUrl);
       return mod.loadPyodide({ indexURL: PYODIDE_INDEX });
     })();
   }
@@ -48,8 +56,8 @@ async function runWasm(code: ArrayBuffer, args: unknown): Promise<unknown> {
   }
 }
 
-async function runPython(code: ArrayBuffer | string, args: unknown): Promise<unknown> {
-  const pyodide = await getPyodide();
+async function runPython(code: ArrayBuffer | string, args: unknown, bootstrapUrl?: string): Promise<unknown> {
+  const pyodide = await getPyodide(bootstrapUrl);
   const src = typeof code === 'string' ? code : new TextDecoder().decode(code);
   pyodide.globals.set('args', args as unknown);
   // `_result` convention: user code assigns it. We emit a sentinel so we can
@@ -68,11 +76,11 @@ async function runPython(code: ArrayBuffer | string, args: unknown): Promise<unk
 }
 
 self.onmessage = async (e: MessageEvent<Req>) => {
-  const { language, code, args } = e.data ?? {};
+  const { language, code, args, pyodideBootstrapUrl } = e.data ?? {};
   try {
     const result = language === 'wasm'
       ? await runWasm(code, args)
-      : await runPython(code, args);
+      : await runPython(code, args, pyodideBootstrapUrl);
     (postMessage as (m: Res) => void)({ ok: true, result });
   } catch (err) {
     (postMessage as (m: Res) => void)({
