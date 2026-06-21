@@ -38,11 +38,21 @@ let pyodidePromise: Promise<unknown> | undefined;
 async function getPyodide(bootstrapUrl?: string): Promise<any> {
   if (!pyodidePromise) {
     pyodidePromise = (async () => {
-      // Use the locally-bundled pyodide.mjs (passed from the SW via
-      // chrome.runtime.getURL) to avoid MV3 CSP blocking CDN script-src.
-      // Falls back to the CDN URL if no local URL is provided.
+      // 1. Load the bootstrap (pyodide.mjs) from local — defines loadPyodide().
       const moduleUrl = bootstrapUrl ?? `${PYODIDE_INDEX}pyodide.mjs`;
       const mod = await import(/* @vite-ignore */ moduleUrl);
+
+      // 2. Pre-load pyodide.asm.js from local — defines _createPyodideModule.
+      //    Without this, loadPyodide() tries import() from CDN → MV3 CSP blocks.
+      //    With it pre-loaded, loadPyodide() skips that import and only uses
+      //    fetch() for the WASM binary + stdlib (allowed by connect-src).
+      if (typeof (globalThis as any)._createPyodideModule !== 'function') {
+        const asmUrl = moduleUrl.replace('pyodide.mjs', 'pyodide.asm.js');
+        await import(/* @vite-ignore */ asmUrl);
+      }
+
+      // 3. Now loadPyodide() finds _createPyodideModule already defined,
+      //    skips the CDN import(), and fetches WASM/stdlib from CDN via fetch().
       return mod.loadPyodide({ indexURL: PYODIDE_INDEX });
     })();
   }
