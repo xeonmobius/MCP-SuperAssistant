@@ -83,10 +83,10 @@ async function runPython(code: ArrayBuffer | string, args: unknown, bootstrapUrl
   // tell "not assigned" (-> null) apart from "assigned null".
   await pyodide.runPythonAsync(
     `${src}\nimport json as _json\n` +
-      `_out = _json.dumps(_result) if "_result" in globals() else "\u0000__none__\u0000"\n`,
+      `_out = _json.dumps(_result) if "_result" in globals() else "__NONE_SENTINEL__"\n`,
   );
   const out = pyodide.globals.get('_out') as string;
-  if (out === '\u0000__none__\u0000') return null;
+  if (out === '__NONE_SENTINEL__') return null;
   try {
     return JSON.parse(out);
   } catch {
