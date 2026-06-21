@@ -25,8 +25,9 @@ export const generateInstructionsJson = (
   const mcpTools = allTools.filter(t => !skillNames.has(t.name));
   const enabledSkills = skills || [];
 
-  if (!allTools || allTools.length === 0) {
-    return '# No tools available\n\nConnect to the MCP server to see available tools.';
+  // Only show "no tools" if there are NO tools AND NO skills.
+  if ((!allTools || allTools.length === 0) && (!enabledSkills || enabledSkills.length === 0)) {
+    return '';
   }
 
   // Start with a header
