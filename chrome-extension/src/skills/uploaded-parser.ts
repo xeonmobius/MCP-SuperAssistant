@@ -122,9 +122,13 @@ async function parseEntries(entries: FileEntry[]): Promise<ParseResult> {
     // Script files (.wasm/.py): never text references. Only the one matching
     // the declared `run:` path is captured as the skill's scriptBlob.
     if (SCRIPT_EXT.test(baseName(e.path))) {
-      if (pf.skill.run && pf.skill.run === rel && e.blob) {
+      if (pf.skill.run && pf.skill.run === rel) {
         const language: ScriptLanguage = /\.wasm$/i.test(baseName(e.path)) ? 'wasm' : 'py';
-        pf.scriptBlob = { path: rel, blob: e.blob, language };
+        // .wasm files arrive as ArrayBuffer (e.blob); .py files arrive as
+        // text (e.text). Encode text to ArrayBuffer so the store/executor
+        // interface is uniform.
+        const blob = e.blob ?? new TextEncoder().encode(e.text || '').buffer;
+        pf.scriptBlob = { path: rel, blob, language };
       }
       continue;
     }
