@@ -127,7 +127,7 @@ async function parseEntries(entries: FileEntry[]): Promise<ParseResult> {
         // .wasm files arrive as ArrayBuffer (e.blob); .py files arrive as
         // text (e.text). Encode text to ArrayBuffer so the store/executor
         // interface is uniform.
-        const blob = e.blob ?? new TextEncoder().encode(e.text || '').buffer;
+        const blob = e.blob ?? new TextEncoder().encode(e.text || '').buffer as ArrayBuffer;
         pf.scriptBlob = { path: rel, blob, language };
       }
       continue;
