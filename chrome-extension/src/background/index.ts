@@ -858,13 +858,29 @@ async function handleMcpMessage(
             result = { content: [{ type: 'text', text: 'skill_read_asset requires skill_name and file_path parameters' }], isError: true };
           } else {
             const skills = getCachedSkills();
-            const skill = skills.find(s => s.name === skill_name);
+            // ponytail: AIs derive skill_name by stripping the `skill_` invocation
+            // prefix from the pseudo-tool name, which yields the underscore-encoded
+            // form ("skill_creator"), not the real name ("skill-creator"). Match the
+            // real name first, then the encoded segment, then the full pseudo-tool
+            // name — same resolution strategy skill invocation uses below.
+            let skill = skills.find(s => s.name === skill_name);
+            if (!skill) skill = skills.find(s => encodeSkillName(s.name) === skill_name);
+            if (!skill) skill = skills.find(s => `skill_${encodeSkillName(s.name)}` === skill_name);
             if (skill && skill.source === 'uploaded') {
               try {
-                const text = uploadedStore ? await uploadedStore.readReference(skill_name, file_path) : undefined;
-                result = text
-                  ? { content: [{ type: 'text', text }] }
-                  : { content: [{ type: 'text', text: `Asset "${file_path}" not found in uploaded skill "${skill_name}"` }], isError: true };
+                const text = uploadedStore ? await uploadedStore.readReference(skill.name, file_path) : undefined;
+                // ponytail: surface the real reference list on miss so the AI stops
+                // guessing filenames (e.g. it invents "skill.json"/"README.md" that
+                // were never uploaded) and retries with an actual path.
+                if (text) {
+                  result = { content: [{ type: 'text', text }] };
+                } else {
+                  const stored = uploadedStore ? await uploadedStore.getUploadedSkill(skill.name) : undefined;
+                  const avail = stored?.references?.length
+                    ? `\nAvailable files in "${skill.name}":\n${stored.references.map(r => ` - ${r}`).join('\n')}`
+                    : '';
+                  result = { content: [{ type: 'text', text: `Asset "${file_path}" not found in uploaded skill "${skill_name}".${avail}` }], isError: true };
+                }
               } catch (err) {
                 result = { content: [{ type: 'text', text: `Failed to read uploaded asset "${file_path}": ${err instanceof Error ? err.message : String(err)}` }], isError: true };
               }
