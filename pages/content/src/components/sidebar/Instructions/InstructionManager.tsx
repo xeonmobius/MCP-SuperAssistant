@@ -119,6 +119,35 @@ const InstructionManager: React.FC<InstructionManagerProps> = ({ adapter, tools 
   const skillAvailable = useSkillStore(s => s.availableSkills);
   const skillEnabledSet = useSkillStore(s => s.enabledSkills);
 
+  // DIRECT skill pull: if the skill store is empty, request skills from the
+  // background immediately. This bypasses the UploadedSkillsManager PULL model
+  // (which depends on the Skills tab being rendered) + the broadcast pipeline
+  // (which depends on connection state). InstructionManager is always mounted
+  // (in the MoreDrawer) so this fires reliably on every sidebar load.
+  const hasPulledSkills = useRef(false);
+  useEffect(() => {
+    if (hasPulledSkills.current || skillAvailable.length > 0) return;
+    hasPulledSkills.current = true;
+    chrome.runtime.sendMessage({ type: 'uploadedSkill:request-skills' }, (res) => {
+      if (chrome.runtime.lastError || !res?.ok || !res.tools?.length) return;
+      const skillItems = res.tools
+        .filter((t: any) => t.name?.startsWith('skill_'))
+        .map((t: any) => ({
+          name: t._skillName ?? t.name.replace(/^skill_/, '').replace(/_/g, '-'),
+          description: t.description || '',
+        }));
+      if (!skillItems.length) return;
+      const store = useSkillStore.getState();
+      store.setAvailableSkills(skillItems);
+      skillItems.forEach((s: { name: string }) => {
+        if (!store.enabledSkills.has(s.name)) {
+          store.enableSkill(s.name);
+        }
+      });
+      logMessage(`[InstructionManager] Direct pull: loaded ${skillItems.length} skills`);
+    });
+  }, [skillAvailable.length]);
+
   const [instructions, setInstructions] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
