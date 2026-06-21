@@ -1,10 +1,16 @@
 ---
 name: test-py
-description: A test skill that runs Python via Pyodide. Say "test python" or "run test skill" to trigger it.
+description: Test skill. Calling skill_test-py runs a Python script automatically in the browser — no code writing needed. Use when the user says "test python" or "run test skill".
 run: scripts/hello.py
 ---
 # Test Python Skill
 
-This skill tests Python execution in the browser via Pyodide. When invoked, it runs `hello.py` which processes the arguments and returns a result.
+When you invoke this skill (output a JSONL function call for `skill_test-py`), the extension automatically runs `hello.py` in a sandboxed Python environment (Pyodide) and returns the result. You don't write any Python — just call the skill.
 
-Usage: ask the AI to "use the test python skill" or "run test-py with {name: 'World'}".
+Example call:
+```jsonl
+{"type": "function_call_start", "name": "skill_test-py", "call_id": 1}
+{"type": "description", "text": "Run the test Python skill"}
+{"type": "parameter", "key": "name", "value": "World"}
+{"type": "function_call_end", "call_id": 1}
+```

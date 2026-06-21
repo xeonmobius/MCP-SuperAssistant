@@ -308,7 +308,10 @@ ClassName | Custom class | User
 
   if (enabledSkills.length > 0) {
     instructions += '\n## AVAILABLE SKILLS\n\n';
-    instructions += 'Skills are specialized capabilities you can invoke. Invoke the skill tool to load its full instructions and follow them exactly.\n\n';
+    instructions += 'To use a skill, output a JSONL function call block with the skill name (prefixed with `skill_`, underscores instead of spaces/hyphens). The extension intercepts it, runs the skill, and returns the result. You do NOT write code yourself — just call the skill tool.\n\n';
+    instructions += 'Example — to invoke a skill named "resume-tailor":\n';
+    instructions += '```jsonl\n{"type": "function_call_start", "name": "skill_resume_tailor", "call_id": 1}\n{"type": "description", "text": "Tailor my resume"}\n{"type": "parameter", "key": "job_posting", "value": "..."}\n{"type": "function_call_end", "call_id": 1}\n```\n\n';
+    instructions += 'Available skills:\n';
     enabledSkills.forEach(skill => {
       instructions += ` - **${skill.name}**: ${skill.description}\n`;
     });
