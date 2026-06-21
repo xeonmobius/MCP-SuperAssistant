@@ -768,7 +768,7 @@ import type { HostConfig } from './config/loadConfig';
 
 export function createServer(cfg: HostConfig): Server {
   const server = new Server(
-    { name: 'mcp-superassistant-host', version: '0.1.0' },
+    { name: 'superassistant-host', version: '0.1.0' },
     { capabilities: { tools: {} } },
   );
 

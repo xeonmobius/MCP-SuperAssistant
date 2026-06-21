@@ -981,7 +981,7 @@ export const MCPPopover: React.FC<MCPPopoverProps> = ({ toggleStateManager, adap
       const isGemini = activePlugin.name === 'Gemini';
       let fileType = isPerplexity || isGemini ? 'text/plain' : 'text/markdown';
       const fileExtension = fileType === 'text/plain' ? '.txt' : '.md';
-      const fileName = `mcp_superassistant_instructions${fileExtension}`;
+      const fileName = `superassistant_instructions${fileExtension}`;
       const file = new File([instructions], fileName, { type: fileType });
       try {
       logger.debug(`Attempting to attach file using ${activePlugin.name} adapter`);

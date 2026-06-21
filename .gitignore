@@ -29,7 +29,7 @@ tsconfig.tsbuildinfo
 # trash
 .trash
 .trash/*
-mcp-superassistant-proxy/bun.lock
+superassistant-proxy/bun.lock
 # pnpm-lock.yaml
 
 # Added by Task Master AI

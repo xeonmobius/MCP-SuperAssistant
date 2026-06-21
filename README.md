@@ -143,20 +143,20 @@ To connect the Chrome extension to a local server for proxying connections:
 2. Start the SuperAssistant Proxy server using one of the following commands:
 
    ```bash
-   npx -y @srbhptl39/mcp-superassistant-proxy@latest --config ./config.json --outputTransport sse
+   npx -y superassistant-proxy@latest --config ./config.json --outputTransport sse
    ```
    or 
    ```bash
-   npx -y @srbhptl39/mcp-superassistant-proxy --config ./config.json --outputTransport streamableHttp
+   npx -y superassistant-proxy --config ./config.json --outputTransport streamableHttp
    ```
    or
    ```bash
-   npx -y @srbhptl39/mcp-superassistant-proxy --config ./config.json --outputTransport ws
+   npx -y superassistant-proxy --config ./config.json --outputTransport ws
    ```
 
    **View all available options:**
    ```bash
-   npx -y @srbhptl39/mcp-superassistant-proxy@latest --help
+   npx -y superassistant-proxy@latest --help
    ```
    
    This is useful for:

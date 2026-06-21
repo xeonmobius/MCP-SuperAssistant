@@ -1,7 +1,7 @@
 # Native Messaging Host — Serverless Local MCP Transport
 
 ## Problem
-SuperAssistant currently requires a local Node proxy (`npx mcp-superassistant-proxy`) listening on `localhost:3006` to reach stdio MCP servers (`filesystem`, `desktop-commander`). This fails on a restrictive company laptop where:
+SuperAssistant currently requires a local Node proxy (`npx superassistant-proxy`) listening on `localhost:3006` to reach stdio MCP servers (`filesystem`, `desktop-commander`). This fails on a restrictive company laptop where:
 - Node.js / `npx` cannot be installed
 - No remote host is permitted (all execution must be local)
 - A listening localhost port is undesirable/blocked

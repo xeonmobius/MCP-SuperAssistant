@@ -23,7 +23,7 @@ const manifest = {
   name: 'SuperAssistant',
   browser_specific_settings: {
     gecko: {
-      id: 'saurabh@superassistant.ai',
+      id: 'superassistant@superassistant.ai',
     },
   },
   version: packageJson.version,
@@ -75,7 +75,6 @@ const manifest = {
   icons: {
     128: 'icon-128.png',
     34: 'icon-34.png',
-    16: 'icon-16.png',
   },
   content_scripts: [
     // {
